@@ -2,9 +2,23 @@
 
 GISTEMP (GISS Surface Temperature Analysis) is an estimate of the global surface temperature change. The basic GISS temperature analysis scheme was defined in the late 1970s by James Hansen, when a method of estimating global temperature change was needed for comparison with 1-D global climate models. This analysis method was fully documented in [Hansen and Lebedeff 1987](https://pubs.giss.nasa.gov/abs/ha00700d.html). Several papers describing the updates to the analysis followed, most recently that of [Hansen et al. (2010)](https://pubs.giss.nasa.gov/abs/ha00510u.html) and [Lenssen et al. (2019)](https://pubs.giss.nasa.gov/abs/le05800h.html).
 
-Data sources:
-* NOAA GHCN v4 (meteorological stations)
-* ERSST v5 (ocean areas)
+Repository structure:
+* data:
+    * Files used for downloading public data
+        * NOAA GHCN v4 (meteorological stations)
+        * ERSST v5 (ocean areas)
+* docs:
+    * Documentation for overall GISTEMP project
+* main
+    * Putting together steps, tools, params, and data to get resulting output
+* parameters
+    * Storing constants used throughout the repo
+        * General algorithmic parameters
+        * Paths
+* steps
+    * Steps 0-5, outlined in docs/overview.txt
+* tools
+    * Various engineering tools used throughout the repository
 
 Contacts:
 * Dr Reto Ruedy
