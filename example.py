@@ -27,7 +27,16 @@ class Hello():
         return f'Hello, {self.name}!'
     
 # Functions
-def square(x):
+def square(x:int):
+    '''
+    Function that squares the input value.
+
+    Input:
+        x (int): Integer to be squared.
+
+    Output:
+        x**2 (int): Squared integer (x^2).
+    '''
     return x**2
 
 # Script logic
