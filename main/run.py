@@ -1,0 +1,31 @@
+'''
+Execute steps of the GISTEMP algorithm.
+
+(Not including all steps for development)
+'''
+
+
+# Standard library imports
+import sys
+import os
+
+# Add the parent folder to sys.path
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
+
+# Local imports
+from steps import step0, step1
+
+# Formatting for stdout
+num_dashes = 25
+dashes = '-'*num_dashes
+
+# Step 0
+print(f'|{dashes} Running Step 0 {dashes}|')
+step0_output = step0.step0()
+# print(step0_output)
+
+# Step 1
+print(f'|{dashes} Running Step 1 {dashes}|')
+step1_output = step1.step1(step0_output)
+# print(step1_output)
