@@ -12,15 +12,13 @@ import pandas as pd
 
 
 def generate_80_cell_grid():
-    # Define the custom latitudinal bands
     lat_bands = [-90, -64.2, -44.4, -23.6, 0, 23.6, 44.4, 64.2, 90]
-    n_bands = len(lat_bands)
-
+    n_bands = len(lat_bands) - 1  # Number of latitude bands
     n_boxes_per_band = 10  # Number of boxes per band
 
     data = []
 
-    for band in range(n_bands - 1):
+    for band in range(n_bands):
         lat_south = lat_bands[band]
         lat_north = lat_bands[band + 1]
 
@@ -28,13 +26,14 @@ def generate_80_cell_grid():
             lon_west = -180 + i * (360 / n_boxes_per_band)
             lon_east = -180 + (i + 1) * (360 / n_boxes_per_band)
 
-            data.append((lat_south, lat_north, lon_west, lon_east))
+            # Calculate the equal area center latitude and longitude
+            sinc = 0.5 * (math.sin(lat_south * math.pi / 180) + math.sin(lat_north * math.pi / 180))
+            center_latitude = math.asin(sinc) * 180 / math.pi
+            center_longitude = 0.5 * (lon_west + lon_east)
 
-    df = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern'])
+            data.append((lat_south, lat_north, lon_west, lon_east, center_latitude, center_longitude))
 
-    # Calculate the center latitude and longitude
-    df['Center_Latitude'] = (df['Southern'] + df['Northern']) / 2
-    df['Center_Longitude'] = (df['Western'] + df['Eastern']) / 2
+    df = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern', 'Center_Latitude', 'Center_Longitude'])
 
     return df
 
