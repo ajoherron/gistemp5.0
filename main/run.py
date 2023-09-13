@@ -29,3 +29,11 @@ step0_output = step0.step0()
 print(f'|{dashes} Running Step 1 {dashes}|')
 step1_output = step1.step1(step0_output)
 # print(step1_output)
+
+# Step 2
+# print(f'|{dashes} Running Step 2 {dashes}|')
+# step2_output = step2.step2(step1_output)
+
+# Step 3
+#print(f'|{dashes} Running Step 1 {dashes}|')
+#step3_output = step3.step3(step1_output)
