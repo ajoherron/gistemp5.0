@@ -11,15 +11,18 @@ import math
 import pandas as pd
 
 
-def create_80_boxes_df():
-    n_bands = 8  # Number of latitude bands
+def generate_80_cell_grid():
+    # Define the custom latitudinal bands
+    lat_bands = [-90, -64.2, -44.4, -23.6, 0, 23.6, 44.4, 64.2, 90]
+    n_bands = len(lat_bands)
+
     n_boxes_per_band = 10  # Number of boxes per band
 
     data = []
 
-    for band in range(n_bands):
-        lat_south = -90 + band * (180 / n_bands)
-        lat_north = -90 + (band + 1) * (180 / n_bands)
+    for band in range(n_bands - 1):
+        lat_south = lat_bands[band]
+        lat_north = lat_bands[band + 1]
 
         for i in range(n_boxes_per_band):
             lon_west = -180 + i * (360 / n_boxes_per_band)
@@ -28,37 +31,42 @@ def create_80_boxes_df():
             data.append((lat_south, lat_north, lon_west, lon_east))
 
     df = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern'])
+
+    # Calculate the center latitude and longitude
+    df['Center_Latitude'] = (df['Southern'] + df['Northern']) / 2
+    df['Center_Longitude'] = (df['Western'] + df['Eastern']) / 2
+
     return df
 
 def lerp(x, y, p):
     return y * p + (1 - p) * x
 
-def generate_8000_cell_grid():
-    def subgen(lat_s, lat_n, lon_w, lon_e):
-        alts = math.sin(lat_s * math.pi / 180)
-        altn = math.sin(lat_n * math.pi / 180)
-        for y in range(10):
-            s = 180 * math.asin(lerp(alts, altn, y * 0.1)) / math.pi
-            n = 180 * math.asin(lerp(alts, altn, (y + 1) * 0.1)) / math.pi
-            for x in range(10):
-                w = lerp(lon_w, lon_e, x * 0.1)
-                e = lerp(lon_w, lon_e, (x + 1) * 0.1)
-                yield (s, n, w, e)
+# def generate_8000_cell_grid():
+#     def subgen(lat_s, lat_n, lon_w, lon_e):
+#         alts = math.sin(lat_s * math.pi / 180)
+#         altn = math.sin(lat_n * math.pi / 180)
+#         for y in range(10):
+#             s = 180 * math.asin(lerp(alts, altn, y * 0.1)) / math.pi
+#             n = 180 * math.asin(lerp(alts, altn, (y + 1) * 0.1)) / math.pi
+#             for x in range(10):
+#                 w = lerp(lon_w, lon_e, x * 0.1)
+#                 e = lerp(lon_w, lon_e, (x + 1) * 0.1)
+#                 yield (s, n, w, e)
 
-    initial_regions_df = create_80_boxes_df()
-    data = []
+#     initial_regions_df = generate_80_cell_grid()
+#     data = []
 
-    for index, row in initial_regions_df.iterrows():
-        for subcell in subgen(row['Southern'], row['Northern'], row['Western'], row['Eastern']):
-            data.append(subcell)
+#     for index, row in initial_regions_df.iterrows():
+#         for subcell in subgen(row['Southern'], row['Northern'], row['Western'], row['Eastern']):
+#             data.append(subcell)
 
-    grid_df = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern'])
+#     grid_df = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern'])
     
-    # Calculate the center latitude and longitude
-    grid_df['Center_Latitude'] = (grid_df['Southern'] + grid_df['Northern']) / 2
-    grid_df['Center_Longitude'] = (grid_df['Western'] + grid_df['Eastern']) / 2
+#     # Calculate the center latitude and longitude
+#     grid_df['Center_Latitude'] = (grid_df['Southern'] + grid_df['Northern']) / 2
+#     grid_df['Center_Longitude'] = (grid_df['Western'] + grid_df['Eastern']) / 2
     
-    return grid_df
+#     return grid_df
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """
