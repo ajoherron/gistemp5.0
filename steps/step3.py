@@ -37,7 +37,7 @@ def generate_80_cell_grid():
 
     return df
 
-def lerp(x, y, p):
+def interpolate(x, y, p):
     return y * p + (1 - p) * x
 
 # def generate_8000_cell_grid():
@@ -45,11 +45,11 @@ def lerp(x, y, p):
 #         alts = math.sin(lat_s * math.pi / 180)
 #         altn = math.sin(lat_n * math.pi / 180)
 #         for y in range(10):
-#             s = 180 * math.asin(lerp(alts, altn, y * 0.1)) / math.pi
-#             n = 180 * math.asin(lerp(alts, altn, (y + 1) * 0.1)) / math.pi
+#             s = 180 * math.asin(interpolate(alts, altn, y * 0.1)) / math.pi
+#             n = 180 * math.asin(interpolate(alts, altn, (y + 1) * 0.1)) / math.pi
 #             for x in range(10):
-#                 w = lerp(lon_w, lon_e, x * 0.1)
-#                 e = lerp(lon_w, lon_e, (x + 1) * 0.1)
+#                 w = interpolate(lon_w, lon_e, x * 0.1)
+#                 e = interpolate(lon_w, lon_e, (x + 1) * 0.1)
 #                 yield (s, n, w, e)
 
 #     initial_regions_df = generate_80_cell_grid()
