@@ -15,19 +15,19 @@ import pandas as pd
 from steps import step0
 
 # Global constants and variables (all caps)
-FOO = 13
-BAR = 1738
+FOO: int = 13
+BAR: int = 1738
 
 # Classes
-class Hello():
-    def __init__(self, name):
+class Hello:
+    def __init__(self, name: str):
         self.name = name
     
-    def greet(self):
+    def greet(self) -> str:
         return f'Hello, {self.name}!'
     
 # Functions
-def square(x:int):
+def square(x: int) -> int:
     '''
     Function that squares the input value.
 

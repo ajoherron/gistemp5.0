@@ -1,4 +1,4 @@
-# Avi Persin, Revision 2016-01-06
+# (Is this needed?)
 
 import os
 

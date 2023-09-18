@@ -12,21 +12,20 @@ Inputs include:
 import requests
 import sys
 import os
+from typing import List
 
 # 3rd-party library imports
 import pandas as pd
 import numpy as np
 
 # Add the parent folder to sys.path
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 
 # Local imports
 from parameters.data import GHCN_temp_url, GHCN_meta_url
 
-
-def get_GHCN_data(temp_url, meta_url):
-
+def get_GHCN_data(temp_url: str, meta_url: str) -> pd.DataFrame:
     '''
     Retrieves and formats temperature data from the Global Historical Climatology Network (GHCN) dataset.
 
@@ -51,7 +50,7 @@ def get_GHCN_data(temp_url, meta_url):
         if response.status_code == 200:
             
             # Get the content of the response
-            file_data = response.content.decode("utf-8")
+            file_data: str = response.content.decode("utf-8")
 
             # Create a list to store formatted data
             formatted_data = []
@@ -64,22 +63,22 @@ def get_GHCN_data(temp_url, meta_url):
                     
                     # Extract relevant data
                     # (Using code from GHCNV4Reader())
-                    station_id = line[:11]
-                    year = int(line[11:15])
-                    values = [int(line[i:i+5]) for i in range(19, 115, 8)]
+                    station_id: str = line[:11]
+                    year: int = int(line[11:15])
+                    values: List[int] = [int(line[i:i+5]) for i in range(19, 115, 8)]
                     
                     # Append data to list
                     formatted_data.append([station_id, year] + values)
 
             # Create DataFrame from formatted data
-            column_names = ['Station_ID', 'Year'] + [f'Month_{i}' for i in range(1, 13)]
-            df_GHCN = pd.DataFrame(formatted_data, columns=column_names)
+            column_names: List[str] = ['Station_ID', 'Year'] + [f'Month_{i}' for i in range(1, 13)]
+            df_GHCN: pd.DataFrame = pd.DataFrame(formatted_data, columns=column_names)
             
             # Replace -9999 with NaN
             df_GHCN.replace(-9999, np.nan, inplace=True)
             
             # Format data - convert to degrees C
-            month_columns = [f'Month_{i}' for i in range(1, 13)]
+            month_columns: List[str] = [f'Month_{i}' for i in range(1, 13)]
             df_GHCN[month_columns] = df_GHCN[month_columns].divide(100)
 
         else:
@@ -89,17 +88,16 @@ def get_GHCN_data(temp_url, meta_url):
         print("An error occurred:", str(e))
 
     # Define the column widths, create meta data dataframe
-    column_widths = [11, 9, 10, 7, 3, 31]
-    df_meta = pd.read_fwf(meta_url, widths=column_widths, header=None,
+    column_widths: List[int] = [11, 9, 10, 7, 3, 31]
+    df_meta: pd.DataFrame = pd.read_fwf(meta_url, widths=column_widths, header=None,
                           names=['Station_ID', 'Latitude', 'Longitude', 'Elevation', 'State', 'Name'])
     # Merge on station ID, set index
-    df = pd.merge(df_GHCN, df_meta[['Station_ID', 'Latitude', 'Longitude', 'Name']], on='Station_ID', how='left')
+    df: pd.DataFrame = pd.merge(df_GHCN, df_meta[['Station_ID', 'Latitude', 'Longitude', 'Name']], on='Station_ID', how='left')
     df = df.set_index('Station_ID')
 
     return df
 
-
-def step0():
+def step0() -> pd.DataFrame:
     '''
     Performs the initial data processing steps for the GHCN temperature dataset.
 
@@ -110,5 +108,5 @@ def step0():
     processes and formats the data, and returns a DataFrame. The data is first fetched using specified URLs,
     and is returned for further analysis.
     '''
-    df_GHCN = get_GHCN_data(GHCN_temp_url, GHCN_meta_url)
+    df_GHCN: pd.DataFrame = get_GHCN_data(GHCN_temp_url, GHCN_meta_url)
     return df_GHCN

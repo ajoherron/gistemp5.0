@@ -1,3 +1,5 @@
+(This is old and needs to be rewritten)
+
 Overview of gistemp
 
 gistemp is a software product written in the Python programming language. 

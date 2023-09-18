@@ -13,14 +13,13 @@ import re
 import sys
 
 # Add the parent folder to sys.path
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 
 # Local imports
 from parameters.data import drop_rules
 
-
-def filter_coordinates(df):
+def filter_coordinates(df: pd.DataFrame) -> pd.DataFrame:
     """
     Filters a DataFrame based on latitude and longitude conditions.
 
@@ -45,8 +44,7 @@ def filter_coordinates(df):
 
     return df_filtered
 
-
-def filter_stations_by_rules(dataframe, rules_text):
+def filter_stations_by_rules(dataframe: pd.DataFrame, rules_text: str) -> pd.DataFrame:
     """
     Filters a DataFrame of climate station data based on exclusion rules specified in a text format.
 
@@ -116,8 +114,7 @@ def filter_stations_by_rules(dataframe, rules_text):
 
     return filtered_dataframe
 
-
-def step1(step0_output):
+def step1(step0_output: pd.DataFrame) -> pd.DataFrame:
     """
     Applies data filtering and cleaning operations to the input DataFrame.
 
