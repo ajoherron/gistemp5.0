@@ -174,7 +174,7 @@ def linearly_decreasing_weight(distance: float, max_distance: float) -> float:
     
     return weight
 
-def nearby_stations(grid_df):
+def nearby_stations(grid_df, station_df):
 
     # Initialize an empty list to store station IDs and weights as dictionaries
     station_weights_within_radius = []
