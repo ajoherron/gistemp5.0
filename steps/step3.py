@@ -9,6 +9,7 @@ Each cell's values are computed using station records within a 1200km radius.
 
 import math
 from typing import Tuple
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
