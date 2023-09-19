@@ -8,64 +8,116 @@ Each cell's values are computed using station records within a 1200km radius.
 '''
 
 import math
+from typing import Tuple
+
+import numpy as np
 import pandas as pd
-from typing import Tuple, List
+from pandas import Series
+
+
+def calculate_area(row: Series) -> float:
+    earth_radius_km: float = 6371.0
+    delta_longitude: float = np.radians(row['Eastern'] - row['Western'])
+    southern_latitude: float = np.radians(row['Southern'])
+    northern_latitude: float = np.radians(row['Northern'])
+    area: float = (earth_radius_km ** 2) * delta_longitude * (np.sin(northern_latitude) - np.sin(southern_latitude))
+    return area
+
+
+def calculate_center_coordinates(row: pd.Series) -> Tuple[float, float]:
+    """Calculate the center latitude and longitude for a given box.
+
+    Args:
+        row (pd.Series): A Pandas Series representing a row of the DataFrame with ('southern', 'northern', 'western', 'eastern') coordinates.
+
+    Returns:
+        Tuple[float, float]: A tuple containing the center latitude and longitude.
+    """
+    center_latitude = 0.5 * (math.sin(row['Southern'] * math.pi / 180) + math.sin(row['Northern'] * math.pi / 180))
+    center_longitude = 0.5 * (row['Western'] + row['Eastern'])
+    center_latitude = math.asin(center_latitude) * 180 / math.pi
+    return center_latitude, center_longitude
+
 
 def generate_80_cell_grid() -> pd.DataFrame:
-    lat_bands: List[float] = [-90, -64.2, -44.4, -23.6, 0, 23.6, 44.4, 64.2, 90]
-    n_bands: int = len(lat_bands) - 1  # Number of latitude bands
-    n_boxes_per_band: int = 10  # Number of boxes per band
+    """Generate an 80-cell grid DataFrame with columns for southern, northern, western, eastern,
+    center_latitude, and center_longitude coordinates.
 
-    data: List[Tuple[float, float, float, float, float, float]] = []
+    Returns:
+        pd.DataFrame: The generated DataFrame.
+    """
+    grid_data = []
+    
+    # Number of horizontal boxes in each band
+    # (proportional to the thickness of each band)
+    band_boxes = [4, 8, 12, 16]
+    
+    # Sines of latitudes
+    band_altitude = [1, 0.9, 0.7, 0.4, 0]
 
-    for band in range(n_bands):
-        lat_south: float = lat_bands[band]
-        lat_north: float = lat_bands[band + 1]
+    # Generate the 40 cells in the northern hemisphere
+    for band in range(len(band_boxes)):
+        n = band_boxes[band]
+        for i in range(n):
+            lats = 180 / math.pi * math.asin(band_altitude[band + 1])
+            latn = 180 / math.pi * math.asin(band_altitude[band])
+            lonw = -180 + 360 * float(i) / n
+            lone = -180 + 360 * float(i + 1) / n
+            box = (lats, latn, lonw, lone)
+            grid_data.append(box)
 
-        for i in range(n_boxes_per_band):
-            lon_west: float = -180 + i * (360 / n_boxes_per_band)
-            lon_east: float = -180 + (i + 1) * (360 / n_boxes_per_band)
+    # Generate the 40 cells in the southern hemisphere by reversing the northern hemisphere cells
+    for box in grid_data[::-1]:
+        grid_data.append((-box[1], -box[0], box[2], box[3]))
 
-            # Calculate the equal area center latitude and longitude
-            sinc: float = 0.5 * (math.sin(lat_south * math.pi / 180) + math.sin(lat_north * math.pi / 180))
-            center_latitude: float = math.asin(sinc) * 180 / math.pi
-            center_longitude: float = 0.5 * (lon_west + lon_east)
+    # Create a DataFrame from the grid data
+    df = pd.DataFrame(grid_data, columns=['Southern', 'Northern', 'Western', 'Eastern'])
 
-            data.append((lat_south, lat_north, lon_west, lon_east, center_latitude, center_longitude))
-
-    df: pd.DataFrame = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern', 'Center_Latitude', 'Center_Longitude'])
+    # Calculate center coordinates for each box and add them as new columns
+    center_coords = df.apply(calculate_center_coordinates, axis=1)
+    df[['Center_Latitude', 'Center_Longitude']] = pd.DataFrame(center_coords.tolist(), index=df.index)
 
     return df
+    
 
 def interpolate(x: float, y: float, p: float) -> float:
     return y * p + (1 - p) * x
 
-def generate_8000_cell_grid() -> pd.DataFrame:
-    def subgen(lat_s: float, lat_n: float, lon_w: float, lon_e: float) -> Generator[Tuple[float, float, float, float], None, None]:
-        alts: float = math.sin(lat_s * math.pi / 180)
-        altn: float = math.sin(lat_n * math.pi / 180)
+
+def generate_8000_cell_grid(grid_80):
+
+    # Initialize an empty list to store subboxes
+    subbox_list = []
+
+    for index, row in grid_80.iterrows():
+        alts = math.sin(row['Southern'] * math.pi / 180)
+        altn = math.sin(row['Northern'] * math.pi / 180)
+
         for y in range(10):
-            s: float = 180 * math.asin(interpolate(alts, altn, y * 0.1)) / math.pi
-            n: float = 180 * math.asin(interpolate(alts, altn, (y + 1) * 0.1)) / math.pi
+            s = 180 * math.asin(interpolate(alts, altn, y * 0.1)) / math.pi
+            n = 180 * math.asin(interpolate(alts, altn, (y + 1) * 0.1)) / math.pi
             for x in range(10):
-                w: float = interpolate(lon_w, lon_e, x * 0.1)
-                e: float = interpolate(lon_w, lon_e, (x + 1) * 0.1)
-                yield (s, n, w, e)
+                w = interpolate(row['Western'], row['Eastern'], x * 0.1)
+                e = interpolate(row['Western'], row['Eastern'], (x + 1) * 0.1)
 
-    initial_regions_df: pd.DataFrame = generate_80_cell_grid()
-    data: List[Tuple[float, float, float, float]] = []
+                # Create a DataFrame for the subbox
+                subbox_df = pd.DataFrame({'Southern': [s], 'Northern': [n], 'Western': [w], 'Eastern': [e]})
 
-    for index, row in initial_regions_df.iterrows():
-        for subcell in subgen(row['Southern'], row['Northern'], row['Western'], row['Eastern']):
-            data.append(subcell)
+                # Append the subbox DataFrame to the list
+                subbox_list.append(subbox_df)
 
-    grid_df: pd.DataFrame = pd.DataFrame(data, columns=['Southern', 'Northern', 'Western', 'Eastern'])
-    
-    # Calculate the center latitude and longitude
-    grid_df['Center_Latitude'] = (grid_df['Southern'] + grid_df['Northern']) / 2
-    grid_df['Center_Longitude'] = (grid_df['Western'] + grid_df['Eastern']) / 2
-    
-    return grid_df
+    # Concatenate all subboxes into a single DataFrame
+    grid_8000 = pd.concat(subbox_list, ignore_index=True)
+
+    # Calculate center coordinates for each box and add them as new columns
+    center_coords = grid_8000.apply(calculate_center_coordinates, axis=1)
+    grid_8000[['Center_Latitude', 'Center_Longitude']] = pd.DataFrame(center_coords.tolist(), index=grid_8000.index)
+
+    # Calculate area of all 8000 cells
+    grid_8000['Area'] = grid_8000.apply(calculate_area, axis=1)
+
+    # Print the resulting DataFrame
+    return grid_8000
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
@@ -101,6 +153,7 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
     return distance
 
+
 def linearly_decreasing_weight(distance: float, max_distance: float) -> float:
     """
     Calculate a linearly decreasing weight based on the given distance
@@ -120,3 +173,39 @@ def linearly_decreasing_weight(distance: float, max_distance: float) -> float:
     weight: float = 1.0 - (distance / max_distance)
     
     return weight
+
+def nearby_stations(grid_df):
+
+    # Initialize an empty list to store station IDs and weights as dictionaries
+    station_weights_within_radius = []
+
+    # Maximum distance for the weight calculation (e.g., 1200.0 km)
+    max_distance = 1200.0
+
+    # Use tqdm to track progress
+    for index, row in tqdm(grid_df.iterrows(), total=len(grid_df), desc="Processing"):
+        center_lat = row['Center_Latitude']
+        center_lon = row['Center_Longitude']
+
+        # Calculate distances for each station in station_df
+        distances = station_df.apply(lambda x: haversine_distance(center_lat, center_lon, x['Latitude'], x['Longitude']), axis=1)
+
+        # Find station IDs within the specified radius
+        nearby_stations = station_df[distances <= max_distance]
+
+        # Calculate weights for each nearby station
+        weights = nearby_stations.apply(lambda x: linearly_decreasing_weight(distances[x.name], max_distance), axis=1)
+
+        # Create a dictionary of station IDs and weights
+        station_weights = dict(zip(nearby_stations['Station_ID'], weights))
+
+        # Append the dictionary to the result list
+        station_weights_within_radius.append(station_weights)
+
+    # Add the list of station IDs and weights as a new column
+    grid_df['Nearby_Stations'] = station_weights_within_radius
+
+    # Set index name
+    grid_df.index.name = 'Box_Number'
+    
+    return grid_df
