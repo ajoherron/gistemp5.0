@@ -26,6 +26,7 @@ from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNES
 from steps.step0 import step0
 from steps.step1 import step1
 from steps.step2 import step2
+from tools import cache as step_cache
 
 EXTRA_INPUT_FILES = {
     'Ts.strange.v4.list.IN_full': STRANGE_URL,
@@ -135,7 +136,7 @@ def compare(df5: pd.DataFrame, df4: pd.DataFrame):
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--force', action='store_true', help='Ignore cache and re-run v4 step2')
+    parser.add_argument('--force', action='store_true', help='Ignore all caches and re-run everything')
     args = parser.parse_args()
 
     print("=== Step 2 comparison: gistemp5 vs gistemp4.0 ===\n")
@@ -147,13 +148,28 @@ def main():
     df4 = run_v4_step2(force=args.force)
 
     print("\n[3/5] Running gistemp5 step0")
-    df0 = step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
+    df0 = None if args.force else step_cache.load('step0', START_YEAR, END_YEAR)
+    if df0 is None:
+        df0 = step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
+        step_cache.save(df0, 'step0', START_YEAR, END_YEAR)
+    else:
+        print("  Loaded from cache.")
 
     print("\n[4/5] Running gistemp5 step1")
-    df1 = step1(df0, STRANGE_URL, START_YEAR, END_YEAR)
+    df1 = None if args.force else step_cache.load('step1', START_YEAR, END_YEAR)
+    if df1 is None:
+        df1 = step1(df0, STRANGE_URL, START_YEAR, END_YEAR)
+        step_cache.save(df1, 'step1', START_YEAR, END_YEAR)
+    else:
+        print("  Loaded from cache.")
 
     print("\n[5/5] Running gistemp5 step2")
-    df5 = step2(df1, GHCN_META_URL, BRIGHTNESS_URL, START_YEAR, END_YEAR)
+    df5 = None if args.force else step_cache.load('step2', START_YEAR, END_YEAR)
+    if df5 is None:
+        df5 = step2(df1, GHCN_META_URL, BRIGHTNESS_URL, START_YEAR, END_YEAR)
+        step_cache.save(df5, 'step2', START_YEAR, END_YEAR)
+    else:
+        print("  Loaded from cache.")
 
     compare(df5, df4)
 

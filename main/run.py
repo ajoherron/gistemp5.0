@@ -11,6 +11,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.logger import logger
+from tools import cache as step_cache
 from steps import step0, step1, step2
 from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
 from parameters.constants import START_YEAR, END_YEAR
@@ -20,12 +21,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description="gistemp5 pipeline")
     parser.add_argument("--start_year", type=int, default=START_YEAR)
     parser.add_argument("--end_year", type=int, default=END_YEAR)
+    parser.add_argument("--no-cache", action="store_true", help="Ignore cached step outputs")
     return parser.parse_args()
 
 
 def main():
     start = time.time()
     args = parse_args()
+    sy, ey = args.start_year, args.end_year
+    use_cache = not args.no_cache
 
     results_dir = "results"
     if os.path.exists(results_dir):
@@ -35,15 +39,30 @@ def main():
     sep = "-" * 25
 
     logger.info(f"|{sep} Step 0 {sep}|")
-    df0 = step0.step0(GHCN_TEMP_URL, GHCN_META_URL, args.start_year, args.end_year)
+    df0 = step_cache.load('step0', sy, ey) if use_cache else None
+    if df0 is None:
+        df0 = step0.step0(GHCN_TEMP_URL, GHCN_META_URL, sy, ey)
+        step_cache.save(df0, 'step0', sy, ey)
+    else:
+        logger.info("  Loaded step0 from cache.")
     df0.to_csv(os.path.join(results_dir, "step0_output.csv"))
 
     logger.info(f"|{sep} Step 1 {sep}|")
-    df1 = step1.step1(df0, STRANGE_URL, args.start_year, args.end_year)
+    df1 = step_cache.load('step1', sy, ey) if use_cache else None
+    if df1 is None:
+        df1 = step1.step1(df0, STRANGE_URL, sy, ey)
+        step_cache.save(df1, 'step1', sy, ey)
+    else:
+        logger.info("  Loaded step1 from cache.")
     df1.to_csv(os.path.join(results_dir, "step1_output.csv"))
 
     logger.info(f"|{sep} Step 2 {sep}|")
-    df2 = step2.step2(df1, GHCN_META_URL, BRIGHTNESS_URL, args.start_year, args.end_year)
+    df2 = step_cache.load('step2', sy, ey) if use_cache else None
+    if df2 is None:
+        df2 = step2.step2(df1, GHCN_META_URL, BRIGHTNESS_URL, sy, ey)
+        step_cache.save(df2, 'step2', sy, ey)
+    else:
+        logger.info("  Loaded step2 from cache.")
     df2.to_csv(os.path.join(results_dir, "step2_output.csv"))
 
     elapsed = round(time.time() - start)

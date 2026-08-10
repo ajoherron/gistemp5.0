@@ -5,6 +5,7 @@ GISTEMP_rewrite/
 # Runtime output
 logs/*.log
 results/
+cache/
 
 # Python
 __pycache__/
