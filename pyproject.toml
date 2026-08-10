@@ -12,6 +12,8 @@ dependencies = [
     "netCDF4",
     "h5py",
     "pyarrow",
+    "jupyter>=1.1.1",
+    "nbconvert>=7.17.1",
 ]
 
 
