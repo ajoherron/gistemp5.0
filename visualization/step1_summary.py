@@ -1,8 +1,9 @@
 """
-Visualize step 1 output: effect of quality-control filtering.
+Compare gistemp5 vs gistemp4.0 step 1 output.
 
-Requires cached step 0 and step 1 outputs. Run from repo root:
-    python main/run.py
+Requires cached outputs. Run from repo root:
+    python main/run.py                  # generates cache/step1_1880_2026.parquet
+    python testing/compare_step2.py     # generates gistemp4.0/tmp/step1_cache.parquet
 Then:
     python visualization/step1_summary.py
 """
@@ -13,6 +14,7 @@ import sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
@@ -22,133 +24,109 @@ sys.path.insert(0, REPO_ROOT)
 from parameters.constants import START_YEAR, END_YEAR
 from tools import cache as step_cache
 
-OUT_PATH = os.path.join(REPO_ROOT, 'visualization', 'step1_summary.png')
+V4_CACHE = os.path.join(REPO_ROOT, 'gistemp4.0', 'tmp', 'step1_cache.parquet')
+OUT_PATH  = os.path.join(REPO_ROOT, 'visualization', 'step1_summary.png')
 
 META_COLS = {'Latitude', 'Longitude', '__LastGHCNYear__'}
 
 
 def load_data():
-    df0 = step_cache.load('step0', START_YEAR, END_YEAR)
-    df1 = step_cache.load('step1', START_YEAR, END_YEAR)
-    if df0 is None or df1 is None:
+    if not os.path.exists(V4_CACHE):
         raise FileNotFoundError(
-            "step0/step1 cache missing. Run: python main/run.py"
+            f"gistemp4.0 step1 cache missing: {V4_CACHE}\n"
+            "Run: python testing/compare_step2.py"
         )
-    return df0, df1
+    df4 = pd.read_parquet(V4_CACHE)
+
+    df5 = step_cache.load('step1', START_YEAR, END_YEAR)
+    if df5 is None:
+        raise FileNotFoundError(
+            f"gistemp5 step1 cache missing for {START_YEAR}–{END_YEAR}.\n"
+            "Run: python main/run.py"
+        )
+    return df4, df5
 
 
-def time_cols(df):
-    return [c for c in df.columns if c not in META_COLS]
+def annual_global_mean(df):
+    tc = [c for c in df.columns if c not in META_COLS]
+    years = sorted({int(c.split('_')[1]) for c in tc})
+    means, counts = [], []
+    for yr in years:
+        cols = [f'{m}_{yr}' for m in range(1, 13) if f'{m}_{yr}' in df.columns]
+        vals = df[cols].values
+        means.append(np.nanmean(vals))
+        counts.append(int(np.any(~np.isnan(vals), axis=1).sum()))
+    return pd.Series(means, index=years), pd.Series(counts, index=years)
 
 
-def valid_cells_per_year(df, tc_set):
-    years = list(range(START_YEAR, END_YEAR + 1))
-    tc_list = sorted(tc_set)
-    valid = df[tc_list].notna()
-    # Group columns by year and sum
-    year_of = pd.Series({c: int(c.split('_')[1]) for c in tc_list})
-    counts = valid.sum(axis=0).groupby(year_of).sum()
-    return counts.reindex(years, fill_value=0)
+def validate(df4, df5):
+    tc4 = [c for c in df4.columns if c not in META_COLS]
+    tc5 = [c for c in df5.columns if c not in META_COLS]
+    shared_cols = sorted(set(tc4) & set(tc5), key=lambda c: (int(c.split('_')[1]), int(c.split('_')[0])))
+    shared_sids = sorted(set(df4.index) & set(df5.index))
+
+    a = df5.loc[shared_sids, shared_cols].astype(float)
+    b = df4.loc[shared_sids, shared_cols].astype(float)
+    diff = (a - b).abs()
+    both = ~a.isna() & ~b.isna()
+
+    n_differ  = int((diff[both] > 1e-4).sum().sum())
+    max_diff  = float(diff.max().max())
+    agreement = "✓ Numerically equivalent" if n_differ == 0 else f"✗ {n_differ:,} cells differ"
+
+    return {
+        'shared_sids': shared_sids,
+        'cells_compared': int(both.sum().sum()),
+        'nan_mismatch': int((a.isna() != b.isna()).sum().sum()),
+        'cells_differ': n_differ,
+        'max_diff': max_diff,
+        'agreement': agreement,
+    }
 
 
-def plot(df0, df1):
-    tc0 = set(time_cols(df0))
-    tc1 = set(time_cols(df1))
-    shared_tc = tc0 & tc1
+def plot(df4, df5, stats):
+    mean4, cnt4 = annual_global_mean(df4)
+    mean5, cnt5 = annual_global_mean(df5)
 
-    dropped_sids = sorted(set(df0.index) - set(df1.index))
-    common_sids  = sorted(set(df0.index) & set(df1.index))
-    shared_tc_l  = sorted(shared_tc)
-    null0 = df0.loc[common_sids, shared_tc_l].isna().sum(axis=1)
-    null1 = df1.loc[common_sids, shared_tc_l].isna().sum(axis=1)
-    nulled_sids = sorted((null1 > null0)[null1 > null0].index)
+    BLUE, RED, GREEN = '#1565C0', '#E53935', '#2E7D32'
 
-    cells0 = valid_cells_per_year(df0, tc0)
-    cells1 = valid_cells_per_year(df1, tc1)
-    cells_removed = cells0 - cells1
+    fig, axes = plt.subplots(3, 1, figsize=(14, 11), sharex=True)
+    fig.suptitle(
+        f'Step 1 Output: gistemp5 vs gistemp4.0  ({START_YEAR}–{END_YEAR})\n'
+        f'{stats["agreement"]}  |  {len(stats["shared_sids"]):,} shared stations  |  '
+        f'Max |diff|: {stats["max_diff"]:.2e} °C',
+        fontsize=13, fontweight='bold'
+    )
 
-    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
-    fig.suptitle(f'Step 1: Quality-Control Filtering ({START_YEAR}–{END_YEAR})',
-                 fontsize=14, fontweight='bold')
-
-    # ── Valid data cells before vs after ───────────────────────
-    ax = axes[0, 0]
-    ax.fill_between(cells0.index, cells0.values, color='#1565C0', alpha=0.4, label='After step 0')
-    ax.fill_between(cells1.index, cells1.values, color='#2E7D32', alpha=0.5, label='After step 1')
-    ax.set_title('Valid Station-Months per Year', fontsize=12)
-    ax.set_ylabel('Valid monthly readings')
-    ax.set_xlabel('Year')
-    ax.set_xlim(START_YEAR, END_YEAR)
-    ax.legend(fontsize=9)
+    # ── Global mean temperature ──────────────────────────────────
+    ax = axes[0]
+    ax.plot(mean4.index, mean4.values, color=BLUE, lw=2.5, label='gistemp4.0', zorder=3)
+    ax.plot(mean5.index, mean5.values, color=RED, lw=1.5, ls='--', label='gistemp5', zorder=4)
+    ax.set_ylabel('Mean Temperature (°C)', fontsize=11)
+    ax.set_title('Global Mean Station Temperature (unweighted)', fontsize=12)
+    ax.legend(fontsize=10)
     ax.grid(alpha=0.25)
 
-    # ── Cells removed per year ──────────────────────────────────
-    ax = axes[0, 1]
-    ax.fill_between(cells_removed.index, cells_removed.values, color='#E53935', alpha=0.6)
-    ax.plot(cells_removed.index, cells_removed.values, color='#E53935', lw=1)
-    ax.set_title('Valid Station-Months Removed by Step 1', fontsize=12)
-    ax.set_ylabel('Readings nulled')
-    ax.set_xlabel('Year')
-    ax.set_xlim(START_YEAR, END_YEAR)
+    # ── Absolute difference ──────────────────────────────────────
+    ax = axes[1]
+    abs_diff = (mean5 - mean4).abs()
+    ax.plot(abs_diff.index, abs_diff.values, color=GREEN, lw=1.5)
+    ax.axhline(0, color='black', lw=0.8, ls='--', alpha=0.5)
+    ax.set_ylabel('|Δ| (°C)', fontsize=11)
+    ax.set_title('Absolute Difference: |gistemp5 − gistemp4.0|', fontsize=12)
+    ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.2e'))
     ax.grid(alpha=0.25)
-    total_removed = int(cells_removed.sum())
-    ax.text(0.98, 0.95, f'Total removed: {total_removed:,}',
-            transform=ax.transAxes, ha='right', va='top', fontsize=9,
-            bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
-    # ── Dropped stations (map) ──────────────────────────────────
-    ax = axes[1, 0]
-    lat_all = df0['Latitude'].astype(float)
-    lon_all = df0['Longitude'].astype(float)
-    ax.scatter(lon_all, lat_all, color='#BDBDBD', s=1, alpha=0.3, label='All stations')
-
-    if dropped_sids:
-        lat_d = df0.loc[dropped_sids, 'Latitude'].astype(float)
-        lon_d = df0.loc[dropped_sids, 'Longitude'].astype(float)
-        ax.scatter(lon_d, lat_d, color='#E53935', s=60, zorder=5,
-                   label=f'Dropped ({len(dropped_sids)})', marker='x', linewidths=2)
-
-    if nulled_sids:
-        lat_n = df0.loc[nulled_sids, 'Latitude'].astype(float)
-        lon_n = df0.loc[nulled_sids, 'Longitude'].astype(float)
-        ax.scatter(lon_n, lat_n, color='#FF6F00', s=40, zorder=4,
-                   label=f'Partially nulled ({len(nulled_sids)})', marker='^')
-
-    ax.set_title('Affected Stations', fontsize=12)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    ax.set_xlim(-180, 180)
-    ax.set_ylim(-90, 90)
-    ax.axhline(0, color='gray', lw=0.5, ls='--')
-    ax.legend(fontsize=9, markerscale=1.5)
-    ax.grid(alpha=0.2)
-
-    # ── Summary table ───────────────────────────────────────────
-    ax = axes[1, 1]
-    ax.axis('off')
-    rows = [
-        ['Stations in step 0',       f'{len(df0):,}'],
-        ['Stations in step 1',        f'{len(df1):,}'],
-        ['Stations dropped',          f'{len(dropped_sids)}'],
-        ['Stations partially nulled', f'{len(nulled_sids)}'],
-        ['Total valid cells (step 0)', f'{int(cells0.sum()):,}'],
-        ['Total valid cells (step 1)', f'{int(cells1.sum()):,}'],
-        ['Valid cells removed',        f'{total_removed:,}'],
-        ['% data removed',             f'{total_removed / cells0.sum() * 100:.4f}%'],
-    ]
-    table = ax.table(cellText=rows, colLabels=['Metric', 'Value'],
-                     cellLoc='left', loc='center', colWidths=[0.65, 0.35])
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1, 1.6)
-    for (r, c), cell in table.get_celld().items():
-        if r == 0:
-            cell.set_facecolor('#1565C0')
-            cell.set_text_props(color='white', fontweight='bold')
-        elif r % 2 == 0:
-            cell.set_facecolor('#F5F5F5')
-        cell.set_edgecolor('white')
-    ax.set_title('Step 1 Summary', fontsize=12, pad=20)
+    # ── Station count ────────────────────────────────────────────
+    ax = axes[2]
+    ax.fill_between(cnt4.index, cnt4.values, color=BLUE, alpha=0.4, label='gistemp4.0')
+    ax.fill_between(cnt5.index, cnt5.values, color=RED, alpha=0.35, label='gistemp5')
+    ax.set_ylabel('Active Stations', fontsize=11)
+    ax.set_xlabel('Year', fontsize=11)
+    ax.set_title('Active Station Count per Year', fontsize=12)
+    ax.legend(fontsize=10)
+    ax.grid(alpha=0.25)
+    ax.set_xlim(START_YEAR, END_YEAR)
 
     plt.tight_layout()
     plt.savefig(OUT_PATH, dpi=150, bbox_inches='tight')
@@ -156,9 +134,15 @@ def plot(df0, df1):
 
 
 if __name__ == '__main__':
-    print("Loading step 0 and step 1 data...")
-    df0, df1 = load_data()
-    print(f"  step 0: {len(df0):,} stations")
-    print(f"  step 1: {len(df1):,} stations")
+    print("Loading data...")
+    df4, df5 = load_data()
+    print("Validating...")
+    stats = validate(df4, df5)
+    print(f"  {stats['agreement']}")
+    print(f"  Shared stations       : {len(stats['shared_sids']):,}")
+    print(f"  Monthly cells compared: {stats['cells_compared']:,}")
+    print(f"  NaN mismatches        : {stats['nan_mismatch']:,}")
+    print(f"  Cells differing >1e-4 : {stats['cells_differ']:,}")
+    print(f"  Max |diff| (°C)       : {stats['max_diff']:.2e}")
     print("Plotting...")
-    plot(df0, df1)
+    plot(df4, df5, stats)
