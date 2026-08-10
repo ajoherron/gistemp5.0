@@ -1,19 +1,21 @@
+UV := $(shell which uv 2>/dev/null || echo $(HOME)/.local/bin/uv)
+
 .PHONY: install venv run test clean compare
 
 install:
-	uv sync --group dev
+	$(UV) sync --group dev
 
 venv:
-	uv venv
+	$(UV) venv
 
 run:
-	uv run python main/run.py
+	$(UV) run python main/run.py
 
 test:
-	uv run pytest testing/ -v
+	$(UV) run pytest testing/ -v
 
 compare:
-	uv run python testing/compare_step0.py
+	$(UV) run python testing/compare_step0.py
 
 clean:
 	rm -rf results/ logs/*.log __pycache__ .pytest_cache
