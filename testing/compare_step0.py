@@ -8,7 +8,6 @@ Run from repo root:
     python testing/compare_step0.py
 """
 
-import io
 import os
 import subprocess
 import sys
@@ -63,7 +62,7 @@ def run_v4_step0(force: bool = False) -> pd.DataFrame:
 
     print("  Running gistemp4.0 step0 (this takes a few minutes) …")
     result = subprocess.run(
-        [sys.executable, DUMP_SCRIPT, str(START_YEAR), str(END_YEAR)],
+        [sys.executable, DUMP_SCRIPT, str(START_YEAR), str(END_YEAR), V4_CACHE],
         cwd=V4_DIR,
         capture_output=True,
         text=True,
@@ -73,10 +72,8 @@ def run_v4_step0(force: bool = False) -> pd.DataFrame:
         print("STDERR from v4 dump:\n", result.stderr[:2000])
         raise RuntimeError("gistemp4.0 step0 dump failed")
 
-    df = pd.read_csv(io.StringIO(result.stdout), index_col='Station_ID', low_memory=False)
-    df.to_parquet(V4_CACHE)
     print(f"  Cached to {V4_CACHE}")
-    return df
+    return pd.read_parquet(V4_CACHE)
 
 
 def time_cols(df: pd.DataFrame):
