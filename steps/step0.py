@@ -78,6 +78,9 @@ def step0(ghcn_temp_url: str, ghcn_meta_url: str, start_year: int, end_year: int
     # Flatten multi-level columns from ("1", 1880) → "1_1880"
     df_wide.columns = [f"{month}_{year}" for month, year in df_wide.columns]
 
+    # Drop stations where every value is missing (matches gistemp4.0 behaviour)
+    df_wide = df_wide.dropna(how="all")
+
     # Sort columns by year (stable sort preserves month order within each year)
     sorted_cols = sorted(df_wide.columns, key=lambda c: int(c.split("_")[1]))
     df_wide = df_wide[sorted_cols]
