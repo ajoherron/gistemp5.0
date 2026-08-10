@@ -167,18 +167,11 @@ def _build_matrix(df: pd.DataFrame, start_year: int, end_year: int) -> np.ndarra
     return mat
 
 
-def _compute_annual_anomalies(mat: np.ndarray,
-                              last_yi_arr: np.ndarray = None) -> np.ndarray:
+def _compute_annual_anomalies(mat: np.ndarray) -> np.ndarray:
     """
     Vectorised annual-anomaly computation over all stations.
 
-    mat:         (n_stations, n_years, 12), NaN for missing values
-    last_yi_arr: optional (n_stations,) int array of year indices whose
-                 December is excluded from the December monthly mean.
-                 When None, defaults to the last year with any valid data
-                 per station (original behaviour, correct for rural stations).
-                 Pass the last GHCN file-entry year index for urban stations
-                 to match gistemp4.0's station-series-length semantics.
+    mat: (n_stations, n_years, 12), NaN for missing values
     Returns: (n_stations, n_years) array, NaN for missing annual anomalies
 
     Algorithm matches gistemp4.0's annual_anomaly() exactly:
@@ -193,9 +186,8 @@ def _compute_annual_anomalies(mat: np.ndarray,
     any_valid_yr = ~np.all(np.isnan(mat), axis=2)           # (ns, ny)
     has_any = np.any(any_valid_yr, axis=1)                   # (ns,)
 
-    if last_yi_arr is None:
-        rev = any_valid_yr[:, ::-1]
-        last_yi_arr = (n_years - 1 - np.argmax(rev, axis=1)).astype(int)
+    rev = any_valid_yr[:, ::-1]
+    last_yi_arr = (n_years - 1 - np.argmax(rev, axis=1)).astype(int)
 
     # Monthly means (nan-safe); axis=1 averages over years
     monthly_means = np.nanmean(mat, axis=1)                  # (ns, 12)
@@ -618,41 +610,9 @@ def urban_adjustments(df: pd.DataFrame,
 
     logger.info("  Building monthly matrix and computing annual anomalies…")
     mat = _build_matrix(df, start_year, end_year)          # (ns, ny, 12)
-
-    # Build per-station December-exclusion index.
-    # Rural stations use last year with valid data (matches v4 — rural GHCN
-    # data has no trailing all-missing rows in practice).
-    # Urban stations use last GHCN file-entry year, which may extend past the
-    # last valid year into all-missing rows; this matches gistemp4.0's
-    # station-series-length semantics and corrects the December mean.
     station_ids = list(df.index)
 
-    any_valid_yr = ~np.all(np.isnan(mat), axis=2)           # (ns, ny)
-    rev = any_valid_yr[:, ::-1]
-    last_valid_yi = (n_years - 1 - np.argmax(rev, axis=1)).astype(int)
-
-    if '__LastGHCNYear__' in df.columns:
-        lgy = df['__LastGHCNYear__'].reindex(station_ids).values.astype(float)
-        last_ghcn_yi = np.where(
-            np.isnan(lgy),
-            last_valid_yi,
-            (lgy - start_year).clip(0, n_years - 1).astype(int),
-        ).astype(int)
-    else:
-        last_ghcn_yi = last_valid_yi
-
-    # For rural stations use last valid year (already matches v4 — rural GHCN
-    # data rarely has trailing all-missing rows). For urban stations use the
-    # last GHCN file-entry year, which may extend past the last valid year;
-    # this matches gistemp4.0's station-series-length December exclusion.
-    gl_vals = np.array([gl.get(sid, None) for sid in station_ids], dtype=object)
-    is_rural_arr = np.array(
-        [(v is None or float(v) <= RURAL_LIGHT_THRESHOLD) for v in gl_vals],
-        dtype=bool,
-    )
-    last_yi_arr = np.where(is_rural_arr, last_valid_yi, last_ghcn_yi)
-
-    annual_all = _compute_annual_anomalies(mat, last_yi_arr)  # (ns, ny)
+    annual_all = _compute_annual_anomalies(mat)             # (ns, ny)
 
     # Annotate stations
     rural = []

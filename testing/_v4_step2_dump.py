@@ -24,7 +24,7 @@ os.makedirs('tmp/work', exist_ok=True)
 from steps.giss_data import BASE_YEAR
 
 START_YEAR  = int(sys.argv[1]) if len(sys.argv) > 1 else BASE_YEAR
-END_YEAR    = int(sys.argv[2]) if len(sys.argv) > 2 else 2023
+END_YEAR    = int(sys.argv[2]) if len(sys.argv) > 2 else 2026
 OUTPUT_PATH = sys.argv[3] if len(sys.argv) > 3 else None
 
 # Silence prints from gistemp4.0 internals

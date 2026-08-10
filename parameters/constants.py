@@ -3,7 +3,7 @@ Algorithm parameters for gistemp5.
 """
 
 START_YEAR = 1880
-END_YEAR = 2023
+END_YEAR = 2026
 
 BASELINE_START_YEAR = 1951
 BASELINE_END_YEAR = 1980
