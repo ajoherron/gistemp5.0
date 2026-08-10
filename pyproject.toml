@@ -14,10 +14,6 @@ dependencies = [
     "pyarrow",
 ]
 
-[dependency-groups]
-dev = [
-    "pytest",
-]
 
 [build-system]
 requires = ["hatchling"]
