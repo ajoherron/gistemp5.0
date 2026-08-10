@@ -23,7 +23,6 @@ build/
 # Environment
 .env
 .venv/
-env/
 
 # Claude Code
 .claude/
