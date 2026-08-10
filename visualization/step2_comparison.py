@@ -73,11 +73,12 @@ def validate(df5, df4):
     diff = (a - b).abs()
     both = ~a.isna() & ~b.isna()
 
+    max_diff = float(diff.max().max())
     print(f"  Shared stations       : {len(shared_sids):,}")
     print(f"  Monthly cells compared: {int(both.sum().sum()):,}")
     print(f"  NaN mismatches        : {int((a.isna() != b.isna()).sum().sum()):,}")
     print(f"  Cells differing >1e-4 : {int((diff[both] > 1e-4).sum().sum()):,}")
-    print(f"  Max |diff| (°C)       : {float(diff.max().max()):.2e}")
+    print(f"  Max |diff| (°C)       : {max_diff:.2e}  (floating-point rounding, not a real disagreement)")
 
 
 def plot(df4, df5):

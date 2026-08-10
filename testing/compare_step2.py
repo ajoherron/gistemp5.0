@@ -126,9 +126,9 @@ def compare(df5: pd.DataFrame, df4: pd.DataFrame):
         print(f"  Mean absolute difference   : {flat.mean():.6f}°C")
 
     if n_differ == 0 and nan_mismatch == 0 and not only_in_5 and not only_in_4:
-        print("\n  ✓ Outputs are IDENTICAL.")
+        print("\n  ✓ Numerically equivalent (no differences above 1e-4°C; any residual is floating-point noise).")
     elif n_differ == 0 and nan_mismatch == 0:
-        print("\n  ✓ Values identical — only station-set differences remain.")
+        print("\n  ✓ Values equivalent — only station-set differences remain.")
     else:
         print("\n  ✗ Differences found — investigate above.")
 
