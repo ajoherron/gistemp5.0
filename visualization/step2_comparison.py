@@ -1,7 +1,7 @@
 """
-Plot global mean temperature and station count from step 2 outputs.
+Compare gistemp5 vs gistemp4.0 step 2 output.
 
-Requires cached step outputs. Run from repo root:
+Requires cached outputs. Run from repo root:
     python main/run.py                  # generates cache/step2_1880_2026.parquet
     python testing/compare_step2.py     # generates gistemp4.0/tmp/step2_cache.parquet
 Then:
@@ -27,11 +27,13 @@ from tools import cache as step_cache
 V4_CACHE = os.path.join(REPO_ROOT, 'gistemp4.0', 'tmp', 'step2_cache.parquet')
 OUT_PATH  = os.path.join(REPO_ROOT, 'visualization', 'step2_comparison.png')
 
+META_COLS = {'Latitude', 'Longitude', '__LastGHCNYear__'}
+
 
 def load_data():
     if not os.path.exists(V4_CACHE):
         raise FileNotFoundError(
-            f"gistemp4.0 cache missing: {V4_CACHE}\n"
+            f"gistemp4.0 step2 cache missing: {V4_CACHE}\n"
             "Run: python testing/compare_step2.py"
         )
     df4 = pd.read_parquet(V4_CACHE)
@@ -45,26 +47,21 @@ def load_data():
     return df4, df5
 
 
-def annual_global_mean(df, start_year, end_year):
-    years = range(start_year, end_year + 1)
+def annual_global_mean(df):
+    tc = [c for c in df.columns if c not in META_COLS]
+    years = sorted({int(c.split('_')[1]) for c in tc})
     means, counts = [], []
     for yr in years:
         cols = [f'{m}_{yr}' for m in range(1, 13) if f'{m}_{yr}' in df.columns]
-        if cols:
-            vals = df[cols].values
-            means.append(np.nanmean(vals))
-            counts.append(int(np.any(~np.isnan(vals), axis=1).sum()))
-        else:
-            means.append(np.nan)
-            counts.append(0)
-    idx = list(years)
-    return pd.Series(means, index=idx), pd.Series(counts, index=idx)
+        vals = df[cols].values
+        means.append(np.nanmean(vals))
+        counts.append(int(np.any(~np.isnan(vals), axis=1).sum()))
+    return pd.Series(means, index=years), pd.Series(counts, index=years)
 
 
-def validate(df5, df4):
-    meta = {'Latitude', 'Longitude', '__LastGHCNYear__'}
-    tc4 = [c for c in df4.columns if c not in meta]
-    tc5 = [c for c in df5.columns if c not in meta]
+def validate(df4, df5):
+    tc4 = [c for c in df4.columns if c not in META_COLS]
+    tc5 = [c for c in df5.columns if c not in META_COLS]
     shared_cols = sorted(set(tc4) & set(tc5), key=lambda c: (int(c.split('_')[1]), int(c.split('_')[0])))
     shared_sids = sorted(set(df4.index) & set(df5.index))
 
@@ -73,35 +70,45 @@ def validate(df5, df4):
     diff = (a - b).abs()
     both = ~a.isna() & ~b.isna()
 
+    n_differ = int((diff[both] > 1e-4).sum().sum())
     max_diff = float(diff.max().max())
-    print(f"  Shared stations       : {len(shared_sids):,}")
-    print(f"  Monthly cells compared: {int(both.sum().sum()):,}")
-    print(f"  NaN mismatches        : {int((a.isna() != b.isna()).sum().sum()):,}")
-    print(f"  Cells differing >1e-4 : {int((diff[both] > 1e-4).sum().sum()):,}")
-    print(f"  Max |diff| (°C)       : {max_diff:.2e}  (floating-point rounding, not a real disagreement)")
+    agreement = "✓ Numerically equivalent" if n_differ == 0 else f"✗ {n_differ:,} cells differ"
+
+    return {
+        'shared_sids': shared_sids,
+        'cells_compared': int(both.sum().sum()),
+        'nan_mismatch': int((a.isna() != b.isna()).sum().sum()),
+        'cells_differ': n_differ,
+        'max_diff': max_diff,
+        'agreement': agreement,
+    }
 
 
-def plot(df4, df5):
-    mean4, cnt4 = annual_global_mean(df4, START_YEAR, END_YEAR)
-    mean5, cnt5 = annual_global_mean(df5, START_YEAR, END_YEAR)
+def plot(df4, df5, stats):
+    mean4, cnt4 = annual_global_mean(df4)
+    mean5, cnt5 = annual_global_mean(df5)
 
     BLUE, RED, GREEN = '#1565C0', '#E53935', '#2E7D32'
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 11), sharex=True)
-    fig.suptitle(f'Step 2 Output: gistemp5 vs gistemp4.0  ({START_YEAR}–{END_YEAR})',
-                 fontsize=14, fontweight='bold')
+    fig.suptitle(
+        f'Step 2 Output: gistemp5 vs gistemp4.0  ({START_YEAR}–{END_YEAR})\n'
+        f'{stats["agreement"]}  |  {len(stats["shared_sids"]):,} shared stations  |  '
+        f'Max |diff|: {stats["max_diff"]:.2e} °C',
+        fontsize=13, fontweight='bold'
+    )
 
     ax = axes[0]
     ax.plot(mean4.index, mean4.values, color=BLUE, lw=2.5, label='gistemp4.0', zorder=3)
-    ax.plot(mean5.index, mean5.values, color=RED, lw=1.5, ls='--',
-            label='gistemp5 (identical)', zorder=4)
+    ax.plot(mean5.index, mean5.values, color=RED, lw=1.5, ls='--', label='gistemp5', zorder=4)
     ax.set_ylabel('Mean Temperature (°C)', fontsize=11)
     ax.set_title('Global Mean Station Temperature (unweighted)', fontsize=12)
     ax.legend(fontsize=10)
     ax.grid(alpha=0.25)
 
     ax = axes[1]
-    ax.plot((mean5 - mean4).abs().index, (mean5 - mean4).abs().values, color=GREEN, lw=1.5)
+    abs_diff = (mean5 - mean4).abs()
+    ax.plot(abs_diff.index, abs_diff.values, color=GREEN, lw=1.5)
     ax.axhline(0, color='black', lw=0.8, ls='--', alpha=0.5)
     ax.set_ylabel('|Δ| (°C)', fontsize=11)
     ax.set_title('Absolute Difference: |gistemp5 − gistemp4.0|', fontsize=12)
@@ -126,7 +133,13 @@ def plot(df4, df5):
 if __name__ == '__main__':
     print("Loading data...")
     df4, df5 = load_data()
-    print("\nValidation:")
-    validate(df5, df4)
-    print("\nPlotting...")
-    plot(df4, df5)
+    print("Validating...")
+    stats = validate(df4, df5)
+    print(f"  {stats['agreement']}")
+    print(f"  Shared stations       : {len(stats['shared_sids']):,}")
+    print(f"  Monthly cells compared: {stats['cells_compared']:,}")
+    print(f"  NaN mismatches        : {stats['nan_mismatch']:,}")
+    print(f"  Cells differing >1e-4 : {stats['cells_differ']:,}")
+    print(f"  Max |diff| (°C)       : {stats['max_diff']:.2e}")
+    print("Plotting...")
+    plot(df4, df5, stats)
