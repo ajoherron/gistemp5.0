@@ -34,4 +34,4 @@ build/
 .ipynb_checkpoints/
 
 # Local testing
-scripts/
+scripts/*.py
