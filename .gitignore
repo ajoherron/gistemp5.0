@@ -1,0 +1,32 @@
+# Reference implementations (kept locally, not pushed)
+gistemp4.0/
+GISTEMP_rewrite/
+
+# Runtime output
+logs/*.log
+results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Data files
+*.nc
+*.dat
+
+# Environment
+.env
+.venv/
+env/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
