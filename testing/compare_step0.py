@@ -20,6 +20,7 @@ import pandas as pd
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 V4_DIR    = os.path.join(REPO_ROOT, 'gistemp4.0')
 V4_INPUT  = os.path.join(V4_DIR, 'tmp', 'input')
+V4_CACHE  = os.path.join(V4_DIR, 'tmp', 'step0_cache.parquet')
 DUMP_SCRIPT = os.path.join(REPO_ROOT, 'testing', '_v4_dump.py')
 
 sys.path.insert(0, REPO_ROOT)
@@ -47,9 +48,20 @@ def fetch_v4_inputs():
             print(f"  {name} already present.")
 
 
-def run_v4_step0() -> pd.DataFrame:
-    """Run gistemp4.0's step0 via subprocess and return a DataFrame."""
-    print("  Running gistemp4.0 step0 …")
+def run_v4_step0(force: bool = False) -> pd.DataFrame:
+    """Run gistemp4.0's step0 and return a DataFrame, using a parquet cache."""
+    dat_mtime = os.path.getmtime(os.path.join(V4_INPUT, 'ghcnm.tavg.qcf.dat'))
+    cache_fresh = (
+        not force
+        and os.path.exists(V4_CACHE)
+        and os.path.getmtime(V4_CACHE) >= dat_mtime
+    )
+
+    if cache_fresh:
+        print("  Loading cached gistemp4.0 step0 output …")
+        return pd.read_parquet(V4_CACHE)
+
+    print("  Running gistemp4.0 step0 (this takes a few minutes) …")
     result = subprocess.run(
         [sys.executable, DUMP_SCRIPT, str(START_YEAR), str(END_YEAR)],
         cwd=V4_DIR,
@@ -60,7 +72,10 @@ def run_v4_step0() -> pd.DataFrame:
     if result.returncode != 0:
         print("STDERR from v4 dump:\n", result.stderr[:2000])
         raise RuntimeError("gistemp4.0 step0 dump failed")
+
     df = pd.read_csv(io.StringIO(result.stdout), index_col='Station_ID', low_memory=False)
+    df.to_parquet(V4_CACHE)
+    print(f"  Cached to {V4_CACHE}")
     return df
 
 
@@ -135,13 +150,18 @@ def compare(df5: pd.DataFrame, df4: pd.DataFrame):
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--force', action='store_true', help='Ignore cache and re-run v4 step0')
+    args = parser.parse_args()
+
     print("=== Step 0 comparison: gistemp5 vs gistemp4.0 ===\n")
 
     print("[1/3] Fetching gistemp4.0 input data")
     fetch_v4_inputs()
 
     print("\n[2/3] Running gistemp4.0 step0")
-    df4 = run_v4_step0()
+    df4 = run_v4_step0(force=args.force)
 
     print("\n[3/3] Running gistemp5 step0")
     df5 = step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
