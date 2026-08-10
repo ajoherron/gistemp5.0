@@ -11,8 +11,8 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.logger import logger
-from steps import step0, step1
-from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL
+from steps import step0, step1, step2
+from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
 from parameters.constants import START_YEAR, END_YEAR
 
 
@@ -41,6 +41,10 @@ def main():
     logger.info(f"|{sep} Step 1 {sep}|")
     df1 = step1.step1(df0, STRANGE_URL, args.start_year, args.end_year)
     df1.to_csv(os.path.join(results_dir, "step1_output.csv"))
+
+    logger.info(f"|{sep} Step 2 {sep}|")
+    df2 = step2.step2(df1, GHCN_META_URL, BRIGHTNESS_URL, args.start_year, args.end_year)
+    df2.to_csv(os.path.join(results_dir, "step2_output.csv"))
 
     elapsed = round(time.time() - start)
     h, rem = divmod(elapsed, 3600)

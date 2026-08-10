@@ -15,7 +15,7 @@ import requests
 from tools.logger import logger
 
 
-def _fetch_ghcn_temps(url: str, start_year: int, end_year: int) -> pd.DataFrame:
+def _fetch_ghcn_temps(url: str, start_year: int, end_year: int):
     """
     Download and parse the GHCN temperature file.
 
@@ -26,6 +26,10 @@ def _fetch_ghcn_temps(url: str, start_year: int, end_year: int) -> pd.DataFrame:
       then 12 groups of 8 chars each:
         cols 19+8k .. 23+8k : monthly value in 0.01 °C (-9999 = missing)
         cols 24+8k .. 26+8k : flags (ignored)
+
+    Returns (df_temps, last_ghcn_year) where last_ghcn_year is a Series
+    {Station_ID → last year with any GHCN file entry in [start_year, end_year]}.
+    This matches gistemp4.0's station-record length for the December exclusion.
     """
     logger.info("Downloading GHCN temperature data...")
     response = requests.get(url)
@@ -43,10 +47,15 @@ def _fetch_ghcn_temps(url: str, start_year: int, end_year: int) -> pd.DataFrame:
 
     df = df[(df["Year"] >= start_year) & (df["Year"] <= end_year)].copy()
 
+    # Record the last GHCN year per station BEFORE converting -9999 → NaN.
+    # gistemp4.0's station series ends at this year (even if all values are
+    # missing), and the December mean excludes that last December.
+    last_ghcn_year = df.groupby("Station_ID")["Year"].max()
+
     month_cols = [str(m) for m in range(1, 13)]
     df[month_cols] = df[month_cols].replace(-9999, np.nan) / 100.0
 
-    return df
+    return df, last_ghcn_year
 
 
 def _fetch_ghcn_meta(url: str) -> pd.DataFrame:
@@ -66,10 +75,12 @@ def step0(ghcn_temp_url: str, ghcn_meta_url: str, start_year: int, end_year: int
     Download and format GHCN land temperature data.
 
     Returns a DataFrame indexed by Station_ID. Columns are {month}_{year}
-    (e.g. "1_1880") sorted by year, followed by Latitude and Longitude.
+    (e.g. "1_1880") sorted by year, followed by Latitude, Longitude, and
+    __LastGHCNYear__ (last year with any GHCN file entry, used by step2 to
+    correctly exclude the last December from the monthly mean calculation).
     Temperature values are in degrees Celsius; missing values are NaN.
     """
-    df_temps = _fetch_ghcn_temps(ghcn_temp_url, start_year, end_year)
+    df_temps, last_ghcn_year = _fetch_ghcn_temps(ghcn_temp_url, start_year, end_year)
     df_meta = _fetch_ghcn_meta(ghcn_meta_url)
 
     # Pivot to wide format: rows=Station_ID, multi-level cols=(month, year)
@@ -92,6 +103,9 @@ def step0(ghcn_temp_url: str, ghcn_meta_url: str, start_year: int, end_year: int
         right_index=True,
         how="left",
     )
+
+    # Store last GHCN year per station; step2 uses this for the December exclusion.
+    df['__LastGHCNYear__'] = last_ghcn_year
 
     logger.info(f"Step 0 complete: {len(df)} stations loaded ({start_year}–{end_year})")
     return df

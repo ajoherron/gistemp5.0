@@ -32,3 +32,6 @@ build/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Local testing
+scripts/

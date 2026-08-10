@@ -1,6 +1,6 @@
 UV := $(shell which uv 2>/dev/null || echo $(HOME)/.local/bin/uv)
 
-.PHONY: install venv run clean compare compare-step0 compare-step1
+.PHONY: install venv run clean compare compare-step0 compare-step1 compare-step2
 
 install:
 	$(UV) sync --group dev
@@ -22,4 +22,7 @@ compare-step0:
 compare-step1:
 	$(UV) run python testing/compare_step1.py
 
-compare: compare-step0 compare-step1
+compare-step2:
+	$(UV) run python testing/compare_step2.py
+
+compare: compare-step0 compare-step1 compare-step2
