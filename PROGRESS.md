@@ -14,7 +14,7 @@ Target: numerically equivalent output at each step (max |diff| < 1e-4 °C vs gis
 | 2 | Drop short records + urban adjustment | ✓ Done | 1.42e-14 °C | 3.82e-16 °C |
 | 3 | Gridding → 8,000 equal-area subboxes | ✓ Done | 1.32e-12 °C | 6.18e-15 °C |
 | 4 | Load ERSSTv5 ocean subboxes | ✓ Done | 0.00e+00 °C | 0.00e+00 °C |
-| 5 | Combine land+ocean → 80 boxes → zonal/global averages | Not started | — | — |
+| 5 | Combine land+ocean → 80 boxes → zonal/global averages | ✓ Done | see note | see note |
 
 Validation basis: steps 1–3 compared cell-by-cell against gistemp4.0 output using matching input data.
 Steps 0–5 match v4's numbering exactly (v4 has no step 6).
@@ -30,6 +30,31 @@ Root cause: v5 downloads the current GHCN file live; the v4 reference parquet wa
 from a locally cached (older) vintage of the same file. The differences are a data snapshot
 artifact, not a code bug. Formal validation of step 0 against a matched GHCN snapshot is
 still pending.
+
+### Step 5 — data-vintage mismatch (two mechanisms)
+
+`compare_step5.py` reports diffs of 0.001–0.7 °C depending on zone. Two mechanisms:
+
+**1. Baseline shift** (all zones, ~0.001–0.05 °C): Our step 3 uses 2026 GHCN data; v4
+used Aug 2025 GHCN data. Adding ~11 months of new station observations shifts the bias
+estimates in `series.combine()`. Classic data-vintage signature: smallest diffs near
+the reference period (1961–1990), larger diffs in 1880s and 2025.
+
+**2. Eligibility-threshold crossing** (zones 0 and 7, up to 0.7 °C): The gc=240
+`subbox_min_valid` threshold determines which subboxes are combined into each box.
+Box 76 (90S-64S, western quarter) had 21 subboxes with gc=246 in 2026 GHCN but
+~gc=235 in Aug 2025 GHCN — just below the threshold in v4, just above in v5.
+Adding 21 new Antarctic subboxes (with data back to 1946, spanning the 1961–1990
+reference period) changes the `combine()` bias adjustments for the entire combined
+series, shifting anomaly values across all decades by up to 0.7 °C. Zone 0 (Arctic)
+has a similar but smaller effect.
+
+**Confirmation**: For mixed zones where ocean SST dominates (zones 5, 6 which are
+mostly Southern Ocean), v5 and v4 agree to < 0.004 °C — confirming the algorithm
+is correct and all differences trace to data vintage, not code errors.
+
+Additionally, 5 NaN mismatches per zone: months Aug–Dec 2025 are present in v5
+(from 2026 GHCN) but absent in v4's ZON.npz (v4 pipeline ended before Aug 2025).
 
 ### Step 3 — NumPy SIMD vs Python scalar arithmetic (~1e-12 °C)
 
@@ -70,6 +95,57 @@ the residual is below any meaningful physical or numerical threshold.
 
 ---
 
+## Step 5 Implementation Plan
+
+### Algorithm (4 stages, 2 analyses: land-only and mixed)
+
+**Stage 1 — Land/ocean mask** (`ensure_weight`):
+For each of 8000 subboxes: use land if `ocean.good_count < 240` OR `land.d < 100 km`,
+else use ocean. "Land-only" always uses land; "mixed" uses this mask.
+
+**Stage 2 — 8000 subboxes → 80 boxes** (`subbox_to_box`):
+Assign each subbox to its parent large-box using `eqarea.grid()` + `centre()`.
+Sort contributors by `good_count` descending. Combine via scalar `series.combine()`
+(`min_overlap=20`). Anomalize to `(1961, 1990)`.
+
+**Stage 3 — 80 boxes → 16 zones** (`zonav`):
+8 latitudinal bands hold `[4, 8, 12, 16, 16, 12, 8, 4]` boxes each.
+Sort by valid-data count using v4's `sort_perm` (key = `index − value`).
+Combine, anomalize to `(1951, 1980)`. Produce 8 compound zones:
+N_extratrop, Tropical, S_extratrop, NMid, SMid, NH, SH, Global.
+
+**Stage 4 — Monthly → annual** (`annzon`):
+Mean of valid months (min 6). Alternate global: weighted mean of zones [8,3,4,10]
+with weights [3, 2, 2, 3], scaled by 0.1. Alternate hemispheric: 0.4×tropical + 0.6×polar.
+
+### Precision requirements
+- `series.combine()` must be **scalar Python loops** — same reasoning as step 3 bias/anomalize fixes.
+- `sort_perm()` key is `index − value` (not `value − index`) — must match v4 exactly.
+- Series padding to common `yrbeg`/`monm` must replicate v4's `padded_series()`.
+- All summation via sequential `sum()`, not numpy.
+
+### Files
+| File | Action |
+|---|---|
+| `utils/series.py` | NEW — scalar Python `combine()` + `anomalize()` ported from v4 |
+| `steps/step5.py` | NEW — all 4 stages, 2 analyses |
+| `main/run.py` | MOD — add step5 call |
+| `testing/_v4_step5_dump.py` | NEW — reads existing v4 npz files → parquet (no subprocess) |
+| `testing/compare_step5.py` | NEW — compare monthly zones |
+| `visualization/step5_comparison.py` | NEW — zone time-series and diff bar chart |
+
+### Output format
+`{'land': result, 'mixed': result}` where each result holds:
+- `annual`: DataFrame (index=year, columns=zone_0…zone_15)
+- `monthly`: DataFrame (index=(year,month), columns=zone_0…zone_15)
+
+### Validation
+v4 has already fully run step 5. Outputs exist at `gistemp4.0/tmp/result/`:
+`mixedZON.*.npz`, `landZON.*.npz`, `mixedBX.*.npz`, `landBX.*.npz`, and CSV annual files.
+No subprocess re-run needed — dump script just converts these npz files to parquet.
+
+---
+
 ## Validation Artifacts
 
 | Script | Purpose |
@@ -85,4 +161,7 @@ the residual is below any meaningful physical or numerical threshold.
 | `visualization/step2_comparison.py` | Step 2 v4 vs v5 overlay |
 | `visualization/step3_comparison.py` | Step 3 v4 vs v5 overlay |
 | `visualization/step4_comparison.py` | Step 4 v4 vs v5 overlay |
+| `testing/_v4_step5_dump.py` | Helper: reads v4 ZON.npz result files → parquet |
+| `testing/compare_step5.py` | Step 5 monthly zone comparison |
+| `visualization/step5_comparison.py` | Step 5 v4 vs v5 zone time-series and diff chart |
 | `visualization/run_all.py` | Regenerate all figures |

@@ -15,6 +15,7 @@ import step1_summary
 import step2_comparison
 import step3_comparison
 import step4_comparison
+import step5_comparison
 
 print("=== Step 0 ===")
 df4_0, df5_0 = step0_summary.load_data()
@@ -45,5 +46,9 @@ df4_4, df5_4 = step4_comparison.load_data()
 stats_4 = step4_comparison.validate(df4_4, df5_4)
 print(f"  {stats_4['agreement']}")
 step4_comparison.plot(df4_4, df5_4, stats_4)
+
+print("\n=== Step 5 ===")
+data_5 = step5_comparison.load_data()
+step5_comparison.plot(data_5)
 
 print("\nDone. Figures saved to visualization/")
