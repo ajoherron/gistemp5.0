@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.logger import logger
 from utils import cache as step_cache
-from steps import step0, step1, step2
+from steps import step0, step1, step2, step3
 from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
 from parameters.constants import START_YEAR, END_YEAR
 
@@ -64,6 +64,15 @@ def main():
     else:
         logger.info("  Loaded step2 from cache.")
     df2.to_csv(os.path.join(results_dir, "step2_output.csv"))
+
+    logger.info(f"|{sep} Step 3 {sep}|")
+    df3 = step_cache.load('step3', sy, ey) if use_cache else None
+    if df3 is None:
+        df3 = step3.step3(df2, sy, ey)
+        step_cache.save(df3, 'step3', sy, ey)
+    else:
+        logger.info("  Loaded step3 from cache.")
+    df3.to_csv(os.path.join(results_dir, "step3_output.csv"))
 
     elapsed = round(time.time() - start)
     h, rem = divmod(elapsed, 3600)
