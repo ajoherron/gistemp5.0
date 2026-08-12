@@ -682,19 +682,22 @@ def urban_adjustments(df: pd.DataFrame,
     logger.info(
         f"  Urban adjusted: {n_adjusted}, dropped (no rural): {n_dropped_urban}")
 
-    # Reconstruct output DataFrame
-    # Stations not in urban_idx pass through unchanged (rural + no-anomaly stations)
-    urban_sids = {station_ids[i] for i in urban_idx}
-    pass_through = [sid for sid in station_ids if sid not in urban_sids]
+    # Reconstruct output DataFrame in original station order (matches v4 yield order).
+    # Dropped urban stations (no rural neighbourhood) are excluded.
+    dropped_urban = {station_ids[i] for i in urban_idx if station_ids[i] not in adjusted_rows}
 
-    parts = [df.loc[pass_through]]
-
-    for sid, col_vals in adjusted_rows.items():
-        row = df.loc[[sid]].copy()
-        for col, val in col_vals.items():
-            if col in row.columns:
-                row.loc[sid, col] = val
-        parts.append(row)
+    parts = []
+    for sid in station_ids:
+        if sid in dropped_urban:
+            continue
+        elif sid in adjusted_rows:
+            row = df.loc[[sid]].copy()
+            for col, val in adjusted_rows[sid].items():
+                if col in row.columns:
+                    row.loc[sid, col] = val
+            parts.append(row)
+        else:
+            parts.append(df.loc[[sid]])
 
     df_out = pd.concat(parts)
     df_out.index.name = 'Station_ID'

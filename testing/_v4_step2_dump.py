@@ -39,6 +39,7 @@ from steps import giss_data as _giss_data
 _giss_data.get_last_year = lambda: END_YEAR
 
 from steps import step2 as v4_step2
+from steps import step3 as v4_step3
 
 sys.stdout = _real_stdout
 
@@ -125,3 +126,40 @@ if OUTPUT_PATH:
     print(f"Saved {len(df2)} step2 stations to {OUTPUT_PATH}")
 else:
     print(df2.to_csv())
+
+# Run step3
+_MISSING = 9999.0
+
+sys.stdout = open(os.devnull, 'w')
+step3_gen = v4_step3.step3(iter(step2_records))
+next(step3_gen)  # skip SubboxMetaData
+step3_boxes = list(step3_gen)
+sys.stdout = _real_stdout
+
+
+def subboxes_to_df(boxes, start_year, end_year):
+    """Serialize v4 step3 subbox objects to wide DataFrame."""
+    rows = []
+    for box in boxes:
+        lat_s, lat_n, lon_w, lon_e = box.box
+        d = float('nan') if box.d == _MISSING else box.d
+        row = {
+            'lat_s': lat_s, 'lat_n': lat_n,
+            'lon_w': lon_w, 'lon_e': lon_e,
+            'n_stations':     box.stations,
+            'station_months': box.station_months,
+            'd':              d,
+        }
+        for fi, val in enumerate(box.series):
+            year  = start_year + fi // 12
+            month = fi % 12 + 1
+            if start_year <= year <= end_year:
+                row[f'{month}_{year}'] = float('nan') if val == _MISSING else val
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+step3_path = os.path.join('tmp', 'step3_cache.parquet')
+df3 = subboxes_to_df(step3_boxes, START_YEAR, END_YEAR)
+df3.to_parquet(step3_path)
+print(f"Saved {len(df3)} step3 subboxes to {step3_path}")

@@ -17,7 +17,7 @@ import pandas as pd
 from utils import eqarea
 from utils.logger import logger
 
-EARTH_RADIUS     = 6371.0
+EARTH_RADIUS     = 6375.0  # matches gistemp4.0/steps/earth.py
 GRIDDING_RADIUS  = 1200.0
 MIN_OVERLAP      = 20
 REFERENCE_PERIOD = (1951, 1980)
@@ -56,7 +56,10 @@ def _combine(comp, comp_wt, new_s, new_wt, min_overlap):
         n = int(both.sum())
         if n < min_overlap:
             continue
-        bias = (float(c_sl[both].sum()) - float(n_sl[both].sum())) / n
+        # Sequential sum to match v4's scalar loop order (series.combine)
+        c_vals = c_sl[both].tolist()
+        n_vals = n_sl[both].tolist()
+        bias = (sum(c_vals) - sum(n_vals)) / n
         valid_n = np.where(~np.isnan(n_sl))[0]
         if len(valid_n) == 0:
             continue
@@ -82,14 +85,15 @@ def _anomalize(series, start_year, ref_period=REFERENCE_PERIOD):
         idx = np.arange(m, len(series), 12)
         row = series[idx]
         ref_vals = row[ref_base:ref_lim]
-        ref_vals = ref_vals[~np.isnan(ref_vals)]
-        if len(ref_vals) > 0:
-            mean = float(ref_vals.mean())
+        # Sequential sum to match v4's valid_mean scalar loop (series.anomalize)
+        ref_valids = [v for v in ref_vals.tolist() if not math.isnan(v)]
+        if ref_valids:
+            mean = sum(ref_valids) / len(ref_valids)
         else:
-            all_vals = row[~np.isnan(row)]
-            if len(all_vals) == 0:
+            all_valids = [v for v in row.tolist() if not math.isnan(v)]
+            if not all_valids:
                 continue
-            mean = float(all_vals.mean())
+            mean = sum(all_valids) / len(all_valids)
         valid_i = idx[~np.isnan(series[idx])]
         series[valid_i] -= mean
 
@@ -115,9 +119,9 @@ def step3(df, start_year, end_year, radius=GRIDDING_RADIUS):
     sn_lon = np.sin(lons * pi180)
     cs_lon = np.cos(lons * pi180)
 
-    # Sort stations by good_count descending (matches gistemp4.0)
+    # Sort stations by good_count descending, stable to preserve original order on ties
     good_counts = np.sum(~np.isnan(mat), axis=1)
-    order  = np.argsort(-good_counts)
+    order  = np.argsort(-good_counts, kind='stable')
     mat    = mat[order]
     sn_lat = sn_lat[order]
     cs_lat = cs_lat[order]
