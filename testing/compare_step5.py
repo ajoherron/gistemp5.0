@@ -57,15 +57,9 @@ def compare_monthly(df4, df5, mode):
     df5s = df5.loc[shared_idx]
 
     print(f"\n── {mode.upper()} monthly zones ({len(shared_idx)} month-rows) ────────────────")
-    print("  NOTE: all differences are expected data-vintage artifacts — our step3 uses")
-    print("  2026 GHCN data; v4 used Aug 2025 data.  Two mechanisms drive diffs:")
-    print("  1) Baseline shift: ~0.001–0.05 °C (smallest near reference period 1961–1990).")
-    print("  2) Threshold-crossing: Antarctic box 76 gained 21 new subboxes that were")
-    print("     below gc=240 in v4 (gc≈235) but above in v5 (gc=246).  Adding these")
-    print("     subboxes shifts the combined series, causing diffs up to 0.7 °C for")
-    print("     zone_7 (90S-64S).  Zone 0 (64N-90N) has similar but smaller effects.")
-    print("  5 NaN mismatches per zone: Aug–Dec 2025 months present in v5 but absent in")
-    print("  v4's ZON.npz (v4 pipeline ended before those months were available).\n")
+    print("  Validated on identical inputs: same GHCN file, same v4.inv, same strange list.")
+    print("  All 16 zones should match to floating-point precision (~1e-14 °C).")
+    print("  Any zone marked ✗ indicates a real algorithm disagreement worth investigating.\n")
 
     any_diff = False
     for zi in range(16):
@@ -117,11 +111,10 @@ def main():
 
     print()
     if all_ok:
-        print("✓ All zones within expected data-vintage range (max |diff| ≤ 0.05 °C)")
+        print("✓ All 16 zones match to floating-point precision — algorithm verified")
     else:
-        print("✗ Unexpected differences — investigate zones marked ✗ above")
-    print("\nNote: For algorithmic equivalence, the reference period years (1951–1960)")
-    print("show the smallest diffs, confirming this is a baseline shift, not a code error.")
+        print("✗ Differences found — check that v4 was run with identical inputs:")
+        print("  same GHCN file, same v4.inv, same Ts.strange.v4.list.IN_full")
 
 
 if __name__ == '__main__':
