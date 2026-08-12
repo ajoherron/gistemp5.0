@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-V4_DIR      = os.path.join(REPO_ROOT, 'gistemp4.0')
+V4_DIR      = os.path.join(REPO_ROOT, '..', 'gistemp4.0')
 V4_STEP2    = os.path.join(V4_DIR, 'tmp', 'step2_cache.parquet')
 V4_STEP3    = os.path.join(V4_DIR, 'tmp', 'step3_cache.parquet')
 DUMP_SCRIPT = os.path.join(REPO_ROOT, 'testing', '_v4_step2_dump.py')

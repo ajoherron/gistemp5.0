@@ -24,7 +24,7 @@ sys.path.insert(0, REPO_ROOT)
 from parameters.constants import START_YEAR, END_YEAR
 from utils import cache as step_cache
 
-V4_CACHE = os.path.join(REPO_ROOT, 'gistemp4.0', 'tmp', 'step3_cache.parquet')
+V4_CACHE = os.path.join(REPO_ROOT, '..', 'gistemp4.0', 'tmp', 'step3_cache.parquet')
 OUT_PATH  = os.path.join(REPO_ROOT, 'visualization', 'step3_comparison.png')
 
 _META = {'lat_s', 'lat_n', 'lon_w', 'lon_e', 'n_stations', 'station_months', 'd'}
