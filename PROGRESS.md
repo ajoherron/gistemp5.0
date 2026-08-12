@@ -13,11 +13,11 @@ Target: numerically equivalent output at each step (max |diff| < 1e-4 °C vs gis
 | 1 | Duplicate merging | ✓ Done | 1.42e-14 °C | 5.38e-17 °C |
 | 2 | Drop short records + urban adjustment | ✓ Done | 1.42e-14 °C | 3.82e-16 °C |
 | 3 | Gridding → 8,000 equal-area subboxes | ✓ Done | 1.32e-12 °C | 6.18e-15 °C |
-| 4 | Regional averages (80 boxes) | Not started | — | — |
-| 5 | Zonal / global averages | Not started | — | — |
-| 6 | SST merge + final output | Not started | — | — |
+| 4 | Load ERSSTv5 ocean subboxes | ✓ Done | 0.00e+00 °C | 0.00e+00 °C |
+| 5 | Combine land+ocean → 80 boxes → zonal/global averages | Not started | — | — |
 
 Validation basis: steps 1–3 compared cell-by-cell against gistemp4.0 output using matching input data.
+Steps 0–5 match v4's numbering exactly (v4 has no step 6).
 
 ---
 
@@ -78,8 +78,11 @@ the residual is below any meaningful physical or numerical threshold.
 | `testing/compare_step1.py` | Step 1 cell-by-cell comparison |
 | `testing/compare_step2.py` | Step 2 cell-by-cell comparison |
 | `testing/compare_step3.py` | Step 3 cell-by-cell comparison |
+| `testing/compare_step4.py` | Step 4 cell-by-cell comparison (reads SBBX binary only) |
+| `testing/_v4_sbbx_dump.py` | Helper: reads SBBX.ERSSTv5 via v4 SubboxReader, writes parquet |
 | `visualization/step0_summary.py` | Step 0 visual summary |
 | `visualization/step1_summary.py` | Step 1 visual summary |
 | `visualization/step2_comparison.py` | Step 2 v4 vs v5 overlay |
 | `visualization/step3_comparison.py` | Step 3 v4 vs v5 overlay |
+| `visualization/step4_comparison.py` | Step 4 v4 vs v5 overlay |
 | `visualization/run_all.py` | Regenerate all figures |

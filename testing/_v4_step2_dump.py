@@ -163,3 +163,42 @@ step3_path = os.path.join('tmp', 'step3_cache.parquet')
 df3 = subboxes_to_df(step3_boxes, START_YEAR, END_YEAR)
 df3.to_parquet(step3_path)
 print(f"Saved {len(df3)} step3 subboxes to {step3_path}")
+
+# Read step4 ocean data directly from SBBX (no pipeline run needed;
+# step4 without monthlies is just reading this file)
+from tool import gio as _gio
+
+ocean_sbbx = os.path.join('tmp', 'input', 'SBBX.ERSSTv5')
+ocean_reader = _gio.SubboxReader(open(ocean_sbbx, 'rb'))
+ocean_it   = iter(ocean_reader)
+ocean_meta = next(ocean_it)  # skip metadata record
+ocean_boxes = list(ocean_it)
+yrbeg_ocean = ocean_meta.yrbeg
+
+
+def ocean_subboxes_to_df(boxes, start_year, end_year, yrbeg=1880):
+    """Serialize v4 SubboxReader ocean boxes to wide DataFrame."""
+    rows = []
+    for box in boxes:
+        lat_s, lat_n, lon_w, lon_e = box.box
+        d = float('nan') if box.d == _MISSING else box.d
+        row = {
+            'lat_s': lat_s, 'lat_n': lat_n,
+            'lon_w': lon_w, 'lon_e': lon_e,
+            'n_stations':     box.stations,
+            'station_months': box.station_months,
+            'd':              d,
+        }
+        for fi, val in enumerate(box.series):
+            year  = yrbeg + fi // 12
+            month = fi % 12 + 1
+            if start_year <= year <= end_year:
+                row[f'{month}_{year}'] = float('nan') if val == _MISSING else val
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+step4_path = os.path.join('tmp', 'step4_cache.parquet')
+df4 = ocean_subboxes_to_df(ocean_boxes, START_YEAR, END_YEAR, yrbeg=yrbeg_ocean)
+df4.to_parquet(step4_path)
+print(f"Saved {len(df4)} step4 ocean subboxes to {step4_path}")
