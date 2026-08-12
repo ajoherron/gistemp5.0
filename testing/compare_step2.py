@@ -26,7 +26,7 @@ from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNES
 from steps.step0 import step0
 from steps.step1 import step1
 from steps.step2 import step2
-from tools import cache as step_cache
+from utils import cache as step_cache
 
 EXTRA_INPUT_FILES = {
     'Ts.strange.v4.list.IN_full': STRANGE_URL,

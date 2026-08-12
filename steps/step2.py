@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from tools.logger import logger
+from utils.logger import logger
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

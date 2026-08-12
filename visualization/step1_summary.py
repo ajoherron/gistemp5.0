@@ -22,7 +22,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
 from parameters.constants import START_YEAR, END_YEAR
-from tools import cache as step_cache
+from utils import cache as step_cache
 
 V4_CACHE = os.path.join(REPO_ROOT, 'gistemp4.0', 'tmp', 'step1_cache.parquet')
 OUT_PATH  = os.path.join(REPO_ROOT, 'visualization', 'step1_summary.png')

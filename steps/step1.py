@@ -9,7 +9,7 @@ step1 / drop_strange logic exactly.
 import requests
 import pandas as pd
 
-from tools.logger import logger
+from utils.logger import logger
 
 
 def _fetch_changes(url: str) -> dict:

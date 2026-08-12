@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from tools.logger import logger
+from utils.logger import logger
 
 
 def _fetch_ghcn_temps(url: str, start_year: int, end_year: int):

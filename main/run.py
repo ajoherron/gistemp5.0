@@ -10,8 +10,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tools.logger import logger
-from tools import cache as step_cache
+from utils.logger import logger
+from utils import cache as step_cache
 from steps import step0, step1, step2
 from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
 from parameters.constants import START_YEAR, END_YEAR
