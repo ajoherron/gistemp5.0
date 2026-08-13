@@ -4,6 +4,7 @@ gistemp4.0/
 # Runtime output
 results/
 cache/
+input/
 
 # Python
 __pycache__/
@@ -31,5 +32,3 @@ build/
 
 # Jupyter
 .ipynb_checkpoints/
-
-# Local testing

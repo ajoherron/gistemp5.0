@@ -15,8 +15,7 @@ import pandas as pd
 import requests
 
 from utils.logger import logger
-
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from utils.config import INPUT_DIR
 
 # ── Constants (matching gistemp4.0/parameters/standard.py) ───────────────────
 BASE_YEAR = 1880
@@ -113,27 +112,13 @@ def _compute_global_light_from_brightness(meta_url: str,
 def _get_global_light(meta_url: str, brightness_url: str) -> pd.Series:
     """Return {Station_ID: global_light} for all stations.
 
-    Strategy (in order):
-      1. Use the GISTEMP-augmented v4.inv from gistemp4.0/tmp/input/ if
-         it has already been generated (len(split) > 5 → augmented).
-      2. Compute from the pre-downloaded wrld-rad.data.txt (if present in
-         gistemp4.0/tmp/input/).
-      3. Download wrld-rad.data.txt and compute.
+    Downloads wrld-rad.data.txt to input/ on first run and caches it there.
     """
-    local_inv = os.path.join(_REPO_ROOT, 'gistemp4.0', 'tmp', 'input', 'v4.inv')
-    if os.path.exists(local_inv):
-        with open(local_inv) as f:
-            first = f.readline()
-        if len(first.split()) > 5:          # augmented file with global_light
-            logger.info("  Reading global_light from local augmented v4.inv …")
-            return _read_global_light_from_augmented_inv(local_inv)
-
-    local_bright = os.path.join(_REPO_ROOT, 'gistemp4.0', 'tmp', 'input',
-                                 'wrld-rad.data.txt')
+    import urllib.request
+    local_bright = os.path.join(INPUT_DIR, 'wrld-rad.data.txt')
     if not os.path.exists(local_bright):
-        logger.info(f"  Downloading wrld-rad.data.txt to {local_bright} …")
-        import urllib.request
-        os.makedirs(os.path.dirname(local_bright), exist_ok=True)
+        logger.info(f"  Downloading wrld-rad.data.txt …")
+        os.makedirs(INPUT_DIR, exist_ok=True)
         urllib.request.urlretrieve(brightness_url, local_bright)
 
     return _compute_global_light_from_brightness(meta_url, local_bright)

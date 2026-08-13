@@ -21,6 +21,7 @@ import pandas as pd
 
 from utils import sbbx
 from utils.logger import logger
+from utils.config import SBBX_URL, INPUT_DIR
 
 _BOS               = '>'
 _MISSING           = 9999.0
@@ -141,6 +142,16 @@ def step4(sbbx_path, start_year, end_year, input_dir=None):
     -------
     DataFrame with 8000 rows in the same format as step3 output.
     """
+    if not os.path.exists(sbbx_path):
+        import gzip, shutil, urllib.request
+        gz_path = sbbx_path + '.gz'
+        logger.info(f"  Downloading SBBX.ERSSTv5 …")
+        os.makedirs(INPUT_DIR, exist_ok=True)
+        urllib.request.urlretrieve(SBBX_URL, gz_path)
+        with gzip.open(gz_path, 'rb') as f_in, open(sbbx_path, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+        os.remove(gz_path)
+
     logger.info(f"  Reading SBBX ocean file: {os.path.basename(sbbx_path)}")
     df_ocean = sbbx.read(sbbx_path, start_year, end_year)
 
