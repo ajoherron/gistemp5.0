@@ -1,6 +1,5 @@
-# Reference implementations (kept locally, not pushed)
+# Reference implementation (kept locally, not pushed)
 gistemp4.0/
-GISTEMP_rewrite/
 
 # Runtime output
 logs/*.log
