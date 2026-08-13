@@ -15,7 +15,7 @@ run-fresh:
 	$(UV) run python main/run.py
 
 clean:
-	rm -rf results/ cache/*.parquet logs/*.log __pycache__ .pytest_cache
+	rm -rf cache/*.parquet logs/*.log __pycache__ .pytest_cache
 
 # ── Step-by-step comparison against gistemp4.0 ───────────────────────────────
 
