@@ -48,7 +48,10 @@ print(f"  {stats_4['agreement']}")
 step4_comparison.plot(df4_4, df5_4, stats_4)
 
 print("\n=== Step 5 ===")
-data_5 = step5_comparison.load_data()
-step5_comparison.plot(data_5)
+try:
+    data_5 = step5_comparison.load_data()
+    step5_comparison.plot(data_5)
+except FileNotFoundError as e:
+    print(f"  Skipped: {e}")
 
 print("\nDone. Figures saved to visualization/")
