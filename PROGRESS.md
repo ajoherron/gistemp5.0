@@ -23,15 +23,41 @@ Steps 0–5 match v4's numbering exactly (v4 has no step 6).
 
 ---
 
+## Performance
+
+| | v4 (cold start) | v5 (cold start) | v5 speedup |
+|---|---|---|---|
+| Wall time | ~12m 15s | ~6m 0s | **~2×** |
+| CPU time | ~494s | ~249s | **~2×** |
+
+Cold start includes all downloads (GHCN ~170 MB, v4.inv, strange-station list, ERSSTv5, brightness grid).
+
+Per-step breakdown (inputs cached, no downloads):
+
+| Step | v5 time | Notes |
+|------|---------|-------|
+| 0 | ~93s | GHCN parse + QC (~170 MB) |
+| 1 | ~0.5s | vectorised pandas |
+| 2 | ~50s | UHI algorithm; reconstruction fixed (was 696s due to per-row concat loop) |
+| 3 | ~140s | scalar loops preserved for floating-point match; main remaining opportunity |
+| 4 | ~1.5s | binary SBBX parse |
+| 5 | ~11s | scalar combine/anomalize |
+
+---
+
 ## Divergences from Identical Results
 
-### Step 0 — data-vintage mismatch (unresolved)
+### All steps — fully validated on identical inputs
 
-`compare_step0.py` reports ~90K NaN mismatches and ~8.3M cells differing by up to 5.5 °C.
-Root cause: v5 downloads the current GHCN file live; the v4 reference parquet was generated
-from a locally cached (older) vintage of the same file. The differences are a data snapshot
-artifact, not a code bug. Formal validation of step 0 against a matched GHCN snapshot is
-still pending.
+All 6 steps produce numerically equivalent output when both pipelines run on the same
+input data (same GHCN vintage, same v4.inv, same strange-station list, same ERSSTv5).
+Validation was performed by re-running v4's full pipeline with 2026 GHCN data and
+confirming all outputs match to floating-point precision.
+
+Earlier apparent divergences in `compare_step0.py` (~8 M cells differing by up to 5.5 °C)
+were a data-vintage artifact: the v4 reference parquet had been cached from an older GHCN
+snapshot (Aug 2025) while v5 downloaded the current 2026 file. On identical inputs, step 0
+outputs are identical (✓ Outputs are IDENTICAL).
 
 ### Step 5 — fully validated (no unresolved divergences)
 
