@@ -20,8 +20,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, 'gistemp4.0'))
 sys.path.insert(0, REPO_ROOT)  # must come first so our 'parameters' wins over gistemp4.0's
 
-from parameters.constants import START_YEAR, END_YEAR
-from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
+from utils.config import START_YEAR, END_YEAR
+from utils.config import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
 from steps.step0 import step0
 from steps.step1 import step1
 from steps.step2 import step2, _compute_annual_anomalies, _build_matrix

@@ -24,8 +24,8 @@ DUMP_SCRIPT = os.path.join(REPO_ROOT, 'testing', '_v4_dump.py')
 
 sys.path.insert(0, REPO_ROOT)
 
-from parameters.constants import START_YEAR, END_YEAR
-from parameters.data import GHCN_TEMP_URL, GHCN_META_URL
+from utils.config import START_YEAR, END_YEAR
+from utils.config import GHCN_TEMP_URL, GHCN_META_URL
 from steps.step0 import step0
 
 INPUT_FILES = {

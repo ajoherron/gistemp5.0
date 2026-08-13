@@ -21,12 +21,12 @@ DUMP_SCRIPT = os.path.join(REPO_ROOT, 'testing', '_v4_step1_dump.py')
 
 sys.path.insert(0, REPO_ROOT)
 
-from parameters.constants import START_YEAR, END_YEAR
-from parameters.data import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL
+from utils.config import START_YEAR, END_YEAR
+from utils.config import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL
 from steps.step0 import step0
 from steps.step1 import step1
 
-from parameters.data import BRIGHTNESS_URL
+from utils.config import BRIGHTNESS_URL
 
 EXTRA_INPUT_FILES = {
     'Ts.strange.v4.list.IN_full': STRANGE_URL,

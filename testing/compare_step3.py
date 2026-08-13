@@ -21,7 +21,7 @@ DUMP_SCRIPT = os.path.join(REPO_ROOT, 'testing', '_v4_step2_dump.py')
 
 sys.path.insert(0, REPO_ROOT)
 
-from parameters.constants import START_YEAR, END_YEAR
+from utils.config import START_YEAR, END_YEAR
 from utils import cache as step_cache
 
 _META = {'lat_s', 'lat_n', 'lon_w', 'lon_e', 'n_stations', 'station_months', 'd'}

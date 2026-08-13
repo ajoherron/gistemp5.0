@@ -21,7 +21,7 @@ import pandas as pd
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
-from parameters.constants import START_YEAR, END_YEAR
+from utils.config import START_YEAR, END_YEAR
 from utils import cache as step_cache
 
 V4_CACHE = os.path.join(REPO_ROOT, '..', 'gistemp4.0', 'tmp', 'step2_cache.parquet')

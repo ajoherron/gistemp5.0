@@ -13,9 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.logger import logger
 from utils import cache as step_cache
 from steps import step0, step1, step2, step3, step4, step5
-from parameters.data import (GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL,
+from utils.config import (GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL,
                               BRIGHTNESS_URL, SBBX_PATH, SBBX_INPUT_DIR)
-from parameters.constants import START_YEAR, END_YEAR
+from utils.config import START_YEAR, END_YEAR
 
 
 def parse_args():
