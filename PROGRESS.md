@@ -113,54 +113,31 @@ the residual is below any meaningful physical or numerical threshold.
 
 ---
 
-## Step 5 Implementation Plan
+## Remaining Optimisation Opportunities
 
-### Algorithm (4 stages, 2 analyses: land-only and mixed)
+### 1. Step 3 — vectorise `combine` / `anomalize` (highest impact)
 
-**Stage 1 — Land/ocean mask** (`ensure_weight`):
-For each of 8000 subboxes: use land if `ocean.good_count < 240` OR `land.d < 100 km`,
-else use ocean. "Land-only" always uses land; "mixed" uses this mask.
+`steps/step3.py` and `utils/series.py` use scalar Python `sum()` loops to match v4's
+sequential floating-point accumulation. Replacing these with numpy would cut step 3 from
+~140 s to single digits. Cost: max diff moves from ~1e-12 °C to ~1e-10 °C — still far below
+any physical or numerical threshold.
 
-**Stage 2 — 8000 subboxes → 80 boxes** (`subbox_to_box`):
-Assign each subbox to its parent large-box using `eqarea.grid()` + `centre()`.
-Sort contributors by `good_count` descending. Combine via scalar `series.combine()`
-(`min_overlap=20`). Anomalize to `(1961, 1990)`.
+### 2. Step 2 — vectorise UHI rural-neighbour search
 
-**Stage 3 — 80 boxes → 16 zones** (`zonav`):
-8 latitudinal bands hold `[4, 8, 12, 16, 16, 12, 8, 4]` boxes each.
-Sort by valid-data count using v4's `sort_perm` (key = `index − value`).
-Combine, anomalize to `(1951, 1980)`. Produce 8 compound zones:
-N_extratrop, Tropical, S_extratrop, NMid, SMid, NH, SH, Global.
+The urban heat-island core (`_rural_difference`, `_getfit`, `_cmbine`) runs ~9,000 scalar
+Python loops over ~147 years of annual anomalies. `_getfit` is O(n²) per station. Step 2
+currently takes ~50 s; vectorising the inner loops could bring this close to zero.
 
-**Stage 4 — Monthly → annual** (`annzon`):
-Mean of valid months (min 6). Alternate global: weighted mean of zones [8,3,4,10]
-with weights [3, 2, 2, 3], scaled by 0.1. Alternate hemispheric: 0.4×tropical + 0.6×polar.
+### 3. Step 0 — GHCN flat-file parse
 
-### Precision requirements
-- `series.combine()` must be **scalar Python loops** — same reasoning as step 3 bias/anomalize fixes.
-- `sort_perm()` key is `index − value` (not `value − index`) — must match v4 exactly.
-- Series padding to common `yrbeg`/`monm` must replicate v4's `padded_series()`.
-- All summation via sequential `sum()`, not numpy.
+~93 s to parse the ~170 MB GHCN fixed-width file. Most of this is I/O + string parsing.
+Pandas `read_fwf` with explicit dtypes, or chunked reading, may help materially.
 
-### Files
-| File | Action |
-|---|---|
-| `utils/series.py` | NEW — scalar Python `combine()` + `anomalize()` ported from v4 |
-| `steps/step5.py` | NEW — all 4 stages, 2 analyses |
-| `main/run.py` | MOD — add step5 call |
-| `testing/_v4_step5_dump.py` | NEW — reads existing v4 npz files → parquet (no subprocess) |
-| `testing/compare_step5.py` | NEW — compare monthly zones |
-| `visualization/step5_comparison.py` | NEW — zone time-series and diff bar chart |
+### 4. Step 2 — own input directory
 
-### Output format
-`{'land': result, 'mixed': result}` where each result holds:
-- `annual`: DataFrame (index=year, columns=zone_0…zone_15)
-- `monthly`: DataFrame (index=(year,month), columns=zone_0…zone_15)
-
-### Validation
-v4 has already fully run step 5. Outputs exist at `gistemp4.0/tmp/result/`:
-`mixedZON.*.npz`, `landZON.*.npz`, `mixedBX.*.npz`, `landBX.*.npz`, and CSV annual files.
-No subprocess re-run needed — dump script just converts these npz files to parquet.
+`steps/step2.py` downloads `wrld-rad.data.txt` and reads `v4.inv` from
+`../gistemp4.0/tmp/input/`, relying on the v4 sibling repo being present.
+v5 should manage its own input cache directory.
 
 ---
 
