@@ -682,24 +682,16 @@ def urban_adjustments(df: pd.DataFrame,
     logger.info(
         f"  Urban adjusted: {n_adjusted}, dropped (no rural): {n_dropped_urban}")
 
-    # Reconstruct output DataFrame in original station order (matches v4 yield order).
-    # Dropped urban stations (no rural neighbourhood) are excluded.
+    # Drop urban stations that had no rural neighbourhood.
     dropped_urban = {station_ids[i] for i in urban_idx if station_ids[i] not in adjusted_rows}
+    df_out = df.drop(list(dropped_urban)).copy()
 
-    parts = []
-    for sid in station_ids:
-        if sid in dropped_urban:
-            continue
-        elif sid in adjusted_rows:
-            row = df.loc[[sid]].copy()
-            for col, val in adjusted_rows[sid].items():
-                if col in row.columns:
-                    row.loc[sid, col] = val
-            parts.append(row)
-        else:
-            parts.append(df.loc[[sid]])
+    # Apply all adjustments in one bulk assignment instead of per-row concat.
+    if adjusted_rows:
+        adj_df = pd.DataFrame.from_dict(adjusted_rows, orient='index')
+        shared_cols = [c for c in adj_df.columns if c in df_out.columns]
+        df_out.loc[adj_df.index, shared_cols] = adj_df[shared_cols].values
 
-    df_out = pd.concat(parts)
     df_out.index.name = 'Station_ID'
     return df_out
 
