@@ -11,7 +11,7 @@ pip install uv                             # install the package manager (one-ti
 git clone https://github.com/ajoherron/gistemp5.0
 cd gistemp5.0
 make install                               # install dependencies
-make run                                   # run the full pipeline (~6 min, downloads data on first run)
+make run                                   # run the full pipeline (downloads data on first run)
 ```
 
 Results land in `cache/` as Parquet files. The global mean temperature anomaly (1880–present) is `zone_15` in `cache/step5_mixed_annual_1880_2026.parquet`. See [Output](#output) for details.
@@ -58,7 +58,7 @@ Every step is compared against v4 output using scripts in `testing/`. Validation
 | 0 | 0 | ✓ Identical |
 | 1 | 1.4e-14 °C | ✓ Floating-point noise |
 | 2 | 1.4e-14 °C | ✓ Floating-point noise |
-| 3 | 1.3e-12 °C | ✓ SIMD/FMA accumulation |
+| 3 | 1.3e-12 °C | ✓ Floating-point noise |
 | 4 | 0 | ✓ Identical |
 | 5 | ~1e-14 °C | ✓ Floating-point noise |
 
