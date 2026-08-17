@@ -64,7 +64,6 @@ def step1(df: pd.DataFrame, strange_url: str, start_year: int, end_year: int) ->
     Drops entire station rows or NaN-s specific month/year ranges,
     matching gistemp4.0 drop_strange() behaviour exactly.
     """
-    logger.info("Downloading Ts.strange.v4.list.IN_full...")
     changes = _fetch_changes(strange_url)
 
     df = df.copy()
