@@ -6,10 +6,13 @@ the GISTEMP quality-control configuration file. Matches gistemp4.0
 step1 / drop_strange logic exactly.
 """
 
-import requests
+import os
+import urllib.request
+
 import pandas as pd
 
 from utils.logger import logger
+from utils.config import INPUT_DIR
 
 
 def _fetch_changes(url: str) -> dict:
@@ -22,11 +25,19 @@ def _fetch_changes(url: str) -> dict:
 
     Returns {station_id: [entry, ...]}
     """
-    response = requests.get(url)
-    response.raise_for_status()
+    local_path = os.path.join(INPUT_DIR, 'Ts.strange.v4.list.IN_full')
+    if not os.path.exists(local_path):
+        logger.info("Downloading Ts.strange.v4.list.IN_full...")
+        os.makedirs(INPUT_DIR, exist_ok=True)
+        urllib.request.urlretrieve(url, local_path)
+    else:
+        logger.info("  Ts.strange: using cached file.")
+
+    with open(local_path) as f:
+        text = f.read()
 
     changes = {}
-    for line in response.text.splitlines():
+    for line in text.splitlines():
         line = line.strip()
         if not line:
             continue

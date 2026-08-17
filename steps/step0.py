@@ -7,12 +7,14 @@ plus Latitude and Longitude columns.
 """
 
 import io
+import os
+import urllib.request
 
 import numpy as np
 import pandas as pd
-import requests
 
 from utils.logger import logger
+from utils.config import INPUT_DIR
 
 
 def _fetch_ghcn_temps(url: str, start_year: int, end_year: int):
@@ -31,15 +33,19 @@ def _fetch_ghcn_temps(url: str, start_year: int, end_year: int):
     {Station_ID → last year with any GHCN file entry in [start_year, end_year]}.
     This matches gistemp4.0's station-record length for the December exclusion.
     """
-    logger.info("Downloading GHCN temperature data...")
-    response = requests.get(url)
-    response.raise_for_status()
+    local_path = os.path.join(INPUT_DIR, 'ghcnm.tavg.qcf.dat')
+    if not os.path.exists(local_path):
+        logger.info("Downloading GHCN temperature data...")
+        os.makedirs(INPUT_DIR, exist_ok=True)
+        urllib.request.urlretrieve(url, local_path)
+    else:
+        logger.info("  GHCN temperature data: using cached file.")
 
     colspecs = [(0, 11), (11, 15)] + [(19 + 8 * i, 24 + 8 * i) for i in range(12)]
     names = ["Station_ID", "Year"] + [str(m) for m in range(1, 13)]
 
     df = pd.read_fwf(
-        io.StringIO(response.text),
+        local_path,
         colspecs=colspecs,
         names=names,
         dtype={"Station_ID": str},
@@ -60,9 +66,15 @@ def _fetch_ghcn_temps(url: str, start_year: int, end_year: int):
 
 def _fetch_ghcn_meta(url: str) -> pd.DataFrame:
     """Download and parse GHCN station inventory (lat, lon only)."""
-    logger.info("Downloading GHCN metadata...")
+    local_path = os.path.join(INPUT_DIR, 'v4.inv')
+    if not os.path.exists(local_path):
+        logger.info("Downloading GHCN metadata...")
+        os.makedirs(INPUT_DIR, exist_ok=True)
+        urllib.request.urlretrieve(url, local_path)
+    else:
+        logger.info("  GHCN metadata: using cached file.")
     df = pd.read_fwf(
-        url,
+        local_path,
         widths=[11, 9, 10, 7, 3, 31],
         names=["Station_ID", "Latitude", "Longitude", "Elevation", "State", "Name"],
         dtype={"Station_ID": str},

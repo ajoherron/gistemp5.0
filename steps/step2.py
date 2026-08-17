@@ -12,7 +12,6 @@ import os
 
 import numpy as np
 import pandas as pd
-import requests
 
 from utils.logger import logger
 from utils.config import INPUT_DIR
@@ -65,11 +64,20 @@ def _compute_global_light_from_brightness(meta_url: str,
 
     Matches generate_brightness.run() exactly.
     """
-    # Load station lat/lon from online v4.inv
-    response = requests.get(meta_url)
-    response.raise_for_status()
+    # Load station lat/lon from v4.inv (cached in input/ by step0)
+    local_inv = os.path.join(INPUT_DIR, 'v4.inv')
+    if os.path.exists(local_inv):
+        with open(local_inv) as f:
+            inv_text = f.read()
+    else:
+        import urllib.request
+        logger.info("  Downloading v4.inv …")
+        os.makedirs(INPUT_DIR, exist_ok=True)
+        urllib.request.urlretrieve(meta_url, local_inv)
+        with open(local_inv) as f:
+            inv_text = f.read()
     stations = {}
-    for line in response.text.splitlines():
+    for line in inv_text.splitlines():
         parts = line.split()
         if len(parts) < 3:
             continue
