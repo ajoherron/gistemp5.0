@@ -6,7 +6,6 @@ dependencies = [
     "pandas",
     "numpy",
     "matplotlib",
-    "requests",
     "pyarrow",
 ]
 

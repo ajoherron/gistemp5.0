@@ -2,6 +2,14 @@
 Execute the gistemp5 pipeline.
 """
 
+import sys
+
+if sys.version_info < (3, 11):
+    sys.exit(
+        f"Python 3.11 or later is required (you have {sys.version.split()[0]}). "
+        "See https://www.python.org/downloads/ to upgrade."
+    )
+
 import argparse
 import os
 import sys

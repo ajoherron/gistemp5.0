@@ -2,6 +2,28 @@
 
 A modern Python port of [NASA GISTEMP 4.0](https://data.giss.nasa.gov/gistemp/) — the surface temperature analysis that produces the canonical global mean temperature record used in climate science and IPCC reports.
 
+## Quick Start
+
+Requires Python 3.11+. Run these commands once to get up and running:
+
+```bash
+pip install uv                             # install the package manager (one-time)
+git clone https://github.com/ajoherron/gistemp5.0
+cd gistemp5.0
+make install                               # install dependencies
+make run                                   # run the full pipeline (~6 min, downloads data on first run)
+```
+
+Results land in `cache/` as Parquet files. The global mean temperature anomaly (1880–present) is `zone_15` in `cache/step5_mixed_annual_1880_2026.parquet`. See [Output](#output) for details.
+
+```python
+import pandas as pd
+df = pd.read_parquet("cache/step5_mixed_annual_1880_2026.parquet")
+print(df["zone_15"])  # global mean temperature anomaly by year
+```
+
+Run `make help` to see all available commands.
+
 ## Motivation
 
 GISTEMP 4.0 is written in legacy CPython: scalar loops, custom array objects, fixed-width text files, and no use of pandas or numpy. It works, but it is hard to read, hard to modify, and slower than it needs to be.
@@ -80,34 +102,76 @@ Every step is compared against v4 output using scripts in `testing/`. Validation
 
 ```
 steps/          # One module per pipeline step (step0.py … step5.py)
-utils/          # Shared utilities: cache, eqarea grid, series combine/anomalize, SBBX reader
-parameters/     # Constants and data source URLs
+utils/          # Shared utilities: cache, config, eqarea grid, series combine/anomalize, SBBX reader
 main/run.py     # Pipeline entry point
 testing/        # Cell-by-cell comparison scripts vs gistemp4.0
-visualization/  # Matplotlib comparison figures for each step
+visualization/  # Matplotlib comparison figures for each step (PNGs saved here)
+input/          # Downloaded input files — GHCN, SBBX, etc. (git-ignored, auto-populated)
 cache/          # Parquet cache of step outputs (git-ignored)
 ```
 
 ## Running
 
 ```bash
-# Install dependencies
-uv sync   # or: pip install -e .
-
-# Run the full pipeline (downloads inputs on first run, ~6 min)
-python main/run.py
-
-# Skip already-computed steps
-python main/run.py          # uses cache by default
-python main/run.py --no-cache   # force re-run all steps
-
-# Regenerate all comparison figures
-python visualization/run_all.py
-
-# Validate against gistemp4.0 (requires ../gistemp4.0 to exist and have been run)
-python testing/compare_step2.py
-python testing/compare_step5.py
+make run           # run the pipeline (uses cached steps when available)
+make run-fresh     # re-run all steps from scratch
+make viz           # generate comparison figures (requires make run first)
+make compare       # validate all steps against gistemp4.0
+make help          # list all available commands
 ```
+
+## Output
+
+Running `make run` produces the following files in `cache/` (all git-ignored):
+
+**Final results** — temperature anomalies in °C relative to the 1951–1980 baseline:
+
+| File | Rows | Columns |
+|------|------|---------|
+| `step5_mixed_annual_1880_2026.parquet` | 1 per year (1880–2026) | 16 zones |
+| `step5_mixed_monthly_1880_2026.parquet` | 1 per month | 16 zones |
+| `step5_land_annual_1880_2026.parquet` | 1 per year | 16 zones (land only) |
+| `step5_land_monthly_1880_2026.parquet` | 1 per month | 16 zones (land only) |
+
+The 16 zones (`zone_0` … `zone_15`) correspond to:
+
+| Columns | Zones |
+|---------|-------|
+| 0–7 | Latitude bands: 64N–90N, 44N–64N, 24N–44N, EQU–24N, 24S–EQU, 44S–24S, 64S–44S, 90S–64S |
+| 8–10 | N-Extratropical, Tropical, S-Extratropical |
+| 11–12 | N-Midlatitude, S-Midlatitude |
+| 13–15 | Northern Hemisphere, Southern Hemisphere, **Global** |
+
+The `mixed` files combine land and ocean data; `land` files use land stations only. The global mean anomaly is `zone_15` in the `mixed` files.
+
+**Intermediate outputs** — one Parquet file per step (`step0` through `step4`) for fast re-runs.
+
+To read results in Python:
+
+```python
+import pandas as pd
+df = pd.read_parquet("cache/step5_mixed_annual_1880_2026.parquet")
+print(df["zone_15"])  # global mean temperature anomaly, 1880–present
+```
+
+## Visualization
+
+```bash
+make viz
+```
+
+Generates one PNG per step and saves them to `visualization/`. Each figure overlays gistemp5 output against the gistemp4.0 reference:
+
+| File | What it shows |
+|------|--------------|
+| `step0_summary.png` | Station count and coverage: v5 vs v4 |
+| `step1_summary.png` | Effect of the strange-station exclusion list |
+| `step2_comparison.png` | Urban heat-island adjusted anomalies: v5 vs v4 |
+| `step3_comparison.png` | Equal-area subbox gridded anomalies: v5 vs v4 |
+| `step4_comparison.png` | ERSSTv5 ocean subbox anomalies: v5 vs v4 |
+| `step5_comparison.png` | Final zonal and global temperature anomalies: v5 vs v4 |
+
+`make viz` requires that `make run` has been run first (step outputs must be cached).
 
 ## Data Sources
 
