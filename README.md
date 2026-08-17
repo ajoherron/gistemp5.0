@@ -17,7 +17,8 @@ make run                                   # run the full pipeline (downloads da
 Results land in `cache/` as Parquet files. The global mean temperature anomaly (1880–present) is `zone_15` in the step 5 mixed annual output. See [Output](#output) for details.
 
 ```python
-import pandas as pd, glob
+import glob
+import pandas as pd
 df = pd.read_parquet(glob.glob("cache/step5_mixed_annual_*.parquet")[0])
 print(df["zone_15"])  # global mean temperature anomaly by year
 ```
@@ -113,7 +114,8 @@ The `mixed` files combine land and ocean data; `land` files use land stations on
 To read results in Python:
 
 ```python
-import pandas as pd, glob
+import glob
+import pandas as pd
 df = pd.read_parquet(glob.glob("cache/step5_mixed_annual_*.parquet")[0])
 print(df["zone_15"])  # global mean temperature anomaly, 1880–present
 ```
