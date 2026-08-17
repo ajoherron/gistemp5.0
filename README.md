@@ -49,22 +49,6 @@ GISTEMP turns raw weather-station records into a global surface temperature anom
 
 The final output is a monthly and annual time series for 16 zones (8 latitude bands, plus hemispheric and global composites) from 1880 to the present.
 
-## Improvements over v4
-
-### Vectorisation
-Steps 0–2 and 4 are fully vectorised using pandas and numpy. The wide-format station DataFrame (`stations × time columns`) lets pandas handle filtering, merging, and anomaly computation in bulk rather than station-by-station loops.
-
-### Step 2 performance fix
-The urban heat-island adjustment in v4 processes ~9,000 urban stations one at a time. The v5 port initially had a correctness-preserving but catastrophically slow reconstruction step (22,526 individual `DataFrame.loc` lookups + `pd.concat` of 22,526 single-row frames — 696 s). Replacing this with a bulk `drop` + `loc` assignment reduced step 2 from **696 s → 50 s** (14×).
-
-### Intentional scalar loops (steps 3 and 5)
-The `combine` and `anomalize` routines in steps 3 and 5 use Python's sequential `sum()` rather than `numpy.sum()`. This is deliberate: numpy uses pairwise summation which accumulates floating-point error differently, producing differences of ~1e-12 °C relative to v4. The scalar loops preserve exact agreement. This is the main remaining performance opportunity — relaxing the constraint would be physically inconsequential and would likely bring step 3 from ~140 s to single digits.
-
-### Modern data formats
-- All intermediate outputs cached as Parquet (fast columnar I/O, ~10× smaller than CSV)
-- Downloads validated against live GHCN data on every run
-- Per-step cache means a re-run skips already-computed steps
-
 ## Validation
 
 Every step is compared against v4 output using scripts in `testing/`. Validation runs v4's full pipeline with the same 2026 GHCN file, same station metadata, and same strange-station list, then diffs the outputs cell by cell.
