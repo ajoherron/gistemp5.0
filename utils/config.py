@@ -3,10 +3,11 @@ Configuration for gistemp5: year range and data source URLs/paths.
 """
 
 import os as _os
+import datetime as _dt
 
 # Pipeline year range
 START_YEAR = 1880
-END_YEAR   = 2026
+END_YEAR   = _dt.date.today().year
 
 # Local input cache (downloaded files, gitignored)
 _REPO_ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))

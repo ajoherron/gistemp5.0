@@ -14,11 +14,11 @@ make install                               # install dependencies
 make run                                   # run the full pipeline (downloads data on first run)
 ```
 
-Results land in `cache/` as Parquet files. The global mean temperature anomaly (1880–present) is `zone_15` in `cache/step5_mixed_annual_1880_2026.parquet`. See [Output](#output) for details.
+Results land in `cache/` as Parquet files. The global mean temperature anomaly (1880–present) is `zone_15` in the step 5 mixed annual output. See [Output](#output) for details.
 
 ```python
-import pandas as pd
-df = pd.read_parquet("cache/step5_mixed_annual_1880_2026.parquet")
+import pandas as pd, glob
+df = pd.read_parquet(glob.glob("cache/step5_mixed_annual_*.parquet")[0])
 print(df["zone_15"])  # global mean temperature anomaly by year
 ```
 
@@ -92,10 +92,10 @@ Running `make run` produces the following files in `cache/` (all git-ignored):
 
 | File | Rows | Columns |
 |------|------|---------|
-| `step5_mixed_annual_1880_2026.parquet` | 1 per year (1880–2026) | 16 zones |
-| `step5_mixed_monthly_1880_2026.parquet` | 1 per month | 16 zones |
-| `step5_land_annual_1880_2026.parquet` | 1 per year | 16 zones (land only) |
-| `step5_land_monthly_1880_2026.parquet` | 1 per month | 16 zones (land only) |
+| `step5_mixed_annual_1880_{year}.parquet` | 1 per year (1880–present) | 16 zones |
+| `step5_mixed_monthly_1880_{year}.parquet` | 1 per month | 16 zones |
+| `step5_land_annual_1880_{year}.parquet` | 1 per year | 16 zones (land only) |
+| `step5_land_monthly_1880_{year}.parquet` | 1 per month | 16 zones (land only) |
 
 The 16 zones (`zone_0` … `zone_15`) correspond to:
 
@@ -113,8 +113,8 @@ The `mixed` files combine land and ocean data; `land` files use land stations on
 To read results in Python:
 
 ```python
-import pandas as pd
-df = pd.read_parquet("cache/step5_mixed_annual_1880_2026.parquet")
+import pandas as pd, glob
+df = pd.read_parquet(glob.glob("cache/step5_mixed_annual_*.parquet")[0])
 print(df["zone_15"])  # global mean temperature anomaly, 1880–present
 ```
 
