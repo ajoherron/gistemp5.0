@@ -51,7 +51,7 @@ The final output is a monthly and annual time series for 16 zones (8 latitude ba
 
 ## Validation
 
-Every step is compared against v4 output using scripts in `testing/`. Validation runs v4's full pipeline with the same 2026 GHCN file, same station metadata, and same strange-station list, then diffs the outputs cell by cell.
+Every step is compared against v4 output using scripts in `testing/`. Validation runs v4's full pipeline on identical input data (same GHCN file, same station metadata, same strange-station list), then diffs the outputs cell by cell.
 
 | Step | Max \|diff\| | Result |
 |------|-------------|--------|
