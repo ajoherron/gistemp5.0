@@ -65,26 +65,6 @@ The `combine` and `anomalize` routines in steps 3 and 5 use Python's sequential 
 - Downloads validated against live GHCN data on every run
 - Per-step cache means a re-run skips already-computed steps
 
-## Performance
-
-Both pipelines timed from a fully cold start (all inputs downloaded fresh):
-
-| | v4 | v5 | Speedup |
-|---|---|---|---|
-| Wall time | ~12m 15s | ~6m 0s | **~2×** |
-| CPU time | ~494 s | ~249 s | **~2×** |
-
-Per-step breakdown (inputs already on disk):
-
-| Step | Time | Bottleneck |
-|------|------|-----------|
-| 0 | 93 s | GHCN parse (~170 MB flat file) |
-| 1 | 0.5 s | — |
-| 2 | 50 s | UHI rural-neighbour search |
-| 3 | 140 s | scalar combine/anomalize loops |
-| 4 | 1.5 s | — |
-| 5 | 11 s | scalar combine/anomalize |
-
 ## Validation
 
 Every step is compared against v4 output using scripts in `testing/`. Validation runs v4's full pipeline with the same 2026 GHCN file, same station metadata, and same strange-station list, then diffs the outputs cell by cell.
@@ -94,7 +74,7 @@ Every step is compared against v4 output using scripts in `testing/`. Validation
 | 0 | 0 | ✓ Identical |
 | 1 | 1.4e-14 °C | ✓ Floating-point noise |
 | 2 | 1.4e-14 °C | ✓ Floating-point noise |
-| 3 | 1.3e-12 °C | ✓ SIMD/FMA accumulation (see PROGRESS.md) |
+| 3 | 1.3e-12 °C | ✓ SIMD/FMA accumulation |
 | 4 | 0 | ✓ Identical |
 | 5 | ~1e-14 °C | ✓ Floating-point noise |
 
