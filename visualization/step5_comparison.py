@@ -47,7 +47,7 @@ def load_data():
         if not os.path.exists(v4_path):
             raise FileNotFoundError(
                 f"v4 reference missing: {v4_path}\n"
-                "Run: python testing/compare_step5.py"
+                "Run: make install-v4 && make compare"
             )
         v4 = pd.read_parquet(v4_path)
 

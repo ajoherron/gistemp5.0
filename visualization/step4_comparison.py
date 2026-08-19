@@ -38,7 +38,7 @@ def load_data():
     if not os.path.exists(V4_CACHE):
         raise FileNotFoundError(
             f"gistemp4.0 step4 cache missing: {V4_CACHE}\n"
-            "Run: python testing/compare_step4.py"
+            "Run: make install-v4 && make compare"
         )
     df4 = pd.read_parquet(V4_CACHE)
     df5 = step_cache.load('step4', START_YEAR, END_YEAR)

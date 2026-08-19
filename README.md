@@ -145,7 +145,7 @@ Generates one PNG per step and saves them to `visualization/`. Each figure overl
 | `step4_comparison.png` | ERSSTv5 ocean subbox anomalies: v5 vs v4 |
 | `step5_comparison.png` | Final zonal and global temperature anomalies: v5 vs v4 |
 
-`make viz` requires that `make run` has been run first (step outputs must be cached).
+`make viz` requires both `make run` (v5 outputs) and `make compare` (v4 reference data). Run `make install-v4` first if you haven't already.
 
 ## Data Sources
 
