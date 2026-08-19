@@ -39,6 +39,24 @@ print("\n-- Step 4 --")
 compare_step4.run_v4_sbbx_dump()
 
 print("\n-- Step 5 --")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+V4_DIR    = os.path.join(REPO_ROOT, '..', 'gistemp4.0')
+zon_land  = os.path.join(V4_DIR, 'tmp', 'result', 'landZON.Ts.GHCN.CL.PA.1200.npz')
+zon_mixed = os.path.join(V4_DIR, 'tmp', 'result', 'mixedZON.Ts.ERSSTV5.GHCN.CL.PA.1200.npz')
+
+if not os.path.exists(zon_land) or not os.path.exists(zon_mixed):
+    print("  Running full gistemp4.0 pipeline to generate step5 ZON files (this takes several minutes) …")
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, os.path.join('tool', 'run.py')],
+        cwd=V4_DIR,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("gistemp4.0 full pipeline failed")
+else:
+    print("  ZON files already present, skipping.")
+
 compare_step5.ensure_v4_cache()
 
 print("\n=== gistemp4.0 pipeline complete ===")
