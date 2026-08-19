@@ -5,7 +5,9 @@ Run from repo root:
     python testing/compare_step2.py
 """
 
+import gzip
 import os
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -22,7 +24,7 @@ DUMP_SCRIPT = os.path.join(REPO_ROOT, 'testing', '_v4_step2_dump.py')
 sys.path.insert(0, REPO_ROOT)
 
 from utils.config import START_YEAR, END_YEAR
-from utils.config import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL
+from utils.config import GHCN_TEMP_URL, GHCN_META_URL, STRANGE_URL, BRIGHTNESS_URL, SBBX_URL
 from steps.step0 import step0
 from steps.step1 import step1
 from steps.step2 import step2
@@ -43,6 +45,20 @@ def fetch_v4_inputs():
             urllib.request.urlretrieve(url, path)
         else:
             print(f"  {name} already present.")
+
+    sbbx_dst = os.path.join(V4_INPUT, 'SBBX.ERSSTv5')
+    if not os.path.exists(sbbx_dst):
+        sbbx_src = os.path.join(REPO_ROOT, 'input', 'SBBX.ERSSTv5')
+        if os.path.exists(sbbx_src):
+            print("  Copying SBBX.ERSSTv5 from gistemp5 input cache …")
+            shutil.copy2(sbbx_src, sbbx_dst)
+        else:
+            print("  Downloading SBBX.ERSSTv5 …")
+            gz_path = sbbx_dst + '.gz'
+            urllib.request.urlretrieve(SBBX_URL, gz_path)
+            with gzip.open(gz_path, 'rb') as f_in, open(sbbx_dst, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+            os.remove(gz_path)
 
 
 def run_v4_step2(force: bool = False) -> pd.DataFrame:
