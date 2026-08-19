@@ -58,8 +58,9 @@ Every step is compared against v4 output using scripts in `testing/`. Validation
 To run the validation yourself:
 
 ```bash
-make install-v4    # download gistemp4.0 into the parent directory (one-time)
-make compare       # validate all steps against gistemp4.0
+make install-v4    # download gistemp4.0 (one-time)
+make run-v4        # run the gistemp4.0 pipeline
+make compare       # diff gistemp5 vs gistemp4.0 outputs
 ```
 
 | Step | Max \|diff\| | Result |
