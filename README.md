@@ -19,7 +19,8 @@ Results land in `cache/` as Parquet files. The global mean temperature anomaly (
 ```python
 import glob
 import pandas as pd
-df = pd.read_parquet(glob.glob("cache/step5_mixed_annual_*.parquet")[0])
+path = glob.glob("cache/step5_mixed_annual_*.parquet")[0]
+df = pd.read_parquet(path)
 print(df["zone_15"])  # global mean temperature anomaly by year
 ```
 
@@ -116,7 +117,8 @@ To read results in Python:
 ```python
 import glob
 import pandas as pd
-df = pd.read_parquet(glob.glob("cache/step5_mixed_annual_*.parquet")[0])
+path = glob.glob("cache/step5_mixed_annual_*.parquet")[0]
+df = pd.read_parquet(path)
 print(df["zone_15"])  # global mean temperature anomaly, 1880–present
 ```
 
