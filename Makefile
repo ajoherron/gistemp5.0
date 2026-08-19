@@ -1,6 +1,6 @@
 UV := $(shell which uv 2>/dev/null || echo $(HOME)/.local/bin/uv)
 
-.PHONY: help install run run-fresh clean \
+.PHONY: help install install-v4 run run-fresh clean \
         compare compare-step0 compare-step1 compare-step2 compare-step3 compare-step4 compare-step5 \
         viz
 
@@ -13,6 +13,7 @@ help:
 	@echo "  viz              Generate comparison figures for all steps (saves to visualization/)"
 	@echo "  clean            Delete cached intermediate outputs"
 	@echo ""
+	@echo "  install-v4       Download gistemp4.0 source (required for compare targets)"
 	@echo "  compare          Validate all steps against gistemp4.0 (runs steps 0-5)"
 	@echo "  compare-step0    Validate step 0 only"
 	@echo "  compare-step1    Validate step 1 only"
@@ -23,6 +24,9 @@ help:
 
 install:
 	$(UV) sync
+
+install-v4:
+	curl -L https://data.giss.nasa.gov/gistemp/sources_v4/gistemp4.0.tar.gz | tar -xz -C ..
 
 run:
 	$(UV) run python main/run.py

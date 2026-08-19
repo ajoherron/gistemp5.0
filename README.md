@@ -55,9 +55,10 @@ The final output is a monthly and annual time series for 16 zones (8 latitude ba
 
 Every step is compared against v4 output using scripts in `testing/`. Validation runs v4's full pipeline on identical input data (same GHCN file, same station metadata, same strange-station list), then diffs the outputs cell by cell.
 
-To run the validation yourself, `gistemp4.0` must be installed as a sibling directory (`../gistemp4.0`):
+To run the validation yourself:
 
 ```bash
+make install-v4    # download gistemp4.0 into the parent directory (one-time)
 make compare       # validate all steps against gistemp4.0
 ```
 
