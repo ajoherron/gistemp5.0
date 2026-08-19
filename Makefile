@@ -30,6 +30,7 @@ install-v4:
 	curl -L https://data.giss.nasa.gov/gistemp/sources_v4/gistemp4.0.tar.gz | tar -xz -C ..
 
 run-v4:
+	@if [ ! -d "../gistemp4.0" ]; then $(MAKE) install-v4; fi
 	$(UV) run python testing/run_v4.py
 
 run:
